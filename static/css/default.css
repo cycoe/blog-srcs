@@ -1,0 +1,713 @@
+#content {
+    background: #fff;
+    max-width: 800px;
+    position: relative;
+    margin: 5px auto;
+}
+#header {
+    float: right;
+    margin-left: 1em;
+    margin-bottom: 1em
+}
+
+nav{
+    text-transform: uppercase;
+    font-size: 30px;
+    text-decoration: none;
+}
+
+/******************************************************
+ * I copied these styles from markdotto.com, who is
+ * the creator of bootstrap, and I also did some
+ * modification. Thanks Mark for the beautiful theme,
+ * so I reserved the @mdo sign below.
+ *****************************************************/
+
+/*
+  __
+  __                  /\ \
+  /'_`\_    ___ ___    \_\ \    ___
+  /'/'_` \ /' __` __`\  /'_` \  / __`\
+  /\ \ \L\ \/\ \/\ \/\ \/\ \L\ \/\ \L\ \
+  \ \ `\__,_\ \_\ \_\ \_\ \___,_\ \____/
+  \ `\_____\\/_/\/_/\/_/\/__,_ /\/___/
+  `\/_____/
+
+*/
+
+
+/* Body resets
+   -------------------------------------------------- */
+
+* {
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+            box-sizing: border-box;
+}
+html, body {
+    margin: 0;
+    padding: 0;
+}
+html {
+    font-size: 62.5%;
+}
+body {
+    padding: 40px;
+    font-family: Menlo, Monaco, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    background-color: #fff;
+}
+p {
+    margin: 10px 0px 10px 0px;
+}
+
+.headline {
+    display: flex;
+}
+
+ul.menu {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.taglist {
+    flex-grow: 0;
+}
+
+.post-title {
+    flex-grow: 1;
+}
+h1.title{
+  display: block;
+  border-bottom: solid 1.5px #acacac;
+  padding: 10px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+h2, h3, h4, .taglist {
+    position: relative;
+    margin: 30px 0px 10px 0px;
+    font-weight: bold;
+    line-height: 1.1;
+    color: #111;
+    text-rendering: optimizeLegibility;
+}
+h2:before, h3:before, h4:before {
+    position: absolute;
+    top: auto;
+    color: #ccc;
+    display: inline;
+}
+h2:before {
+    content: "*";
+    left: -1.25em;
+}
+h3:before {
+    content: "**";
+    left: -2em;
+}
+h4:before {
+    content: "***";
+    left: -2.5em;
+}
+i, em, b, strong {
+    padding-left: .1em;
+    padding-right: .1em;
+}
+b, strong {
+    font-weight: bold;
+    color: #333;
+}
+b:before, b:after, strong:before, strong:after {
+    content: "*";
+}
+i:before, i:after, em:before, em:after {
+    content: "/";
+    color: #ccc;
+}
+hr {
+    margin: 0;
+    border: 0;
+}
+hr:after {
+    display: block;
+    margin: 20px 0;
+    content: "----------------------------------------------------------------";
+    color: #ccc;
+}
+ul, ol {
+    padding: 0;
+    margin: 0 0 20px;
+}
+code, pre {
+    font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+code {
+    color: #d14;
+}
+code:before, code:after {
+    content: "=";
+    color: #ccc;
+}
+pre {
+    display: block;
+    margin: 0 0 14px;
+    padding: 10px 15px 10px 15px;
+    border-radius: 5px;
+    line-height: 24px;
+    background-color: #f5f5f5;
+    /* Break lines rather than scrollbar */
+    /* white-space: pre-wrap; */
+    /* word-break: break-all; */
+    /* word-wrap: break-word; */
+    overflow: auto;
+    position: relative;
+}
+pre:hover {
+  overflow: auto;
+}
+.code-type-flag {
+  color: #666;
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 10px 15px 10px 15px;
+  animation-name: fade-in;
+  animation-duration: 0.6s;
+  /* z-index: -1; */
+}
+pre:hover .code-type-flag {
+  display: none;
+}
+
+blockquote {
+    background: #f9f9f9;
+    padding: 0 5px 0 20px;
+    margin: 0 30px 20px -22.5px;
+    color: #999;
+    border-left: 8px solid #e5e5e5;
+}
+blockquote p:last-child {
+    margin-bottom: 0;
+}
+
+img {
+    border: 2px solid #e5e5e5;
+    /* Set image in a block and centering */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 90%;
+    /* border-radius: 5px; */
+    animation-name: fade-in;
+    animation-duration: 1s;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+img:hover {
+  opacity: 0.7;
+}
+
+/* caption of the figures */
+figcaption {
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 201; /* Sit on top */
+  padding-top: 100px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+}
+
+/* Modal Content (Image) */
+img.modal-content {
+  margin: auto;
+  display: block;
+  width: 80%;
+  max-width: 700px;
+  cursor: initial;
+}
+img.modal-content:hover {
+  opacity: 1;
+}
+
+/* Caption of Modal Image (Image Text) - Same Width as the Image */
+#caption {
+  margin: auto;
+  display: block;
+  width: 80%;
+  max-width: 700px;
+  text-align: center;
+  color: #ccc;
+  padding: 10px 0;
+  height: 150px;
+}
+
+/* Add Animation - Zoom in the Modal */
+.modal-content, #caption {
+  animation-name: zoom;
+  animation-duration: 0.6s;
+}
+
+/* The Close Button */
+span.close {
+  position: absolute;
+  top: 15px;
+  right: 35px;
+  color: #f1f1f1;
+  font-size: 40px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+span.close:hover, span.close:focus {
+  color: #bbb;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Style for links */
+a {
+    font-weight: inherit;
+    line-height: inherit;
+    color: #000;
+    text-decoration: underline;
+}
+a:before {
+    color: #ccc;
+    content: "[";
+}
+a:after {
+    color: #ccc;
+    content: "]";
+}
+a:hover {
+    text-decoration: underline;
+    background-color: lightblue;
+}
+
+table {
+    background: #ffffa7;
+    border-top: hidden;
+    border-bottom: hidden;
+    border-radius: 5px;
+    display: table;
+    line-height: 2;
+    font-size: 90%;
+    /* Horizontal centering */
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 15px;
+    max-width: 100%;
+    /* width: 100%; */
+}
+table td, table th {
+    padding: 0 15px;
+}
+table th.left, table td.left {
+    text-align: left;
+}
+table th.right, table td.right {
+    text-align: right;
+}
+/******************************************************/
+/* body */
+.container {
+    margin: 0 auto;
+    max-width: 770px;
+}
+/* head */
+.masthead {
+    color: #888;
+}
+.masthead:after {
+    display: block;
+    content: '----------------------------------------------------------------';
+    margin: 10px 0;
+    color: #ccc;
+}
+.masthead a {
+    color: #333;
+}
+.masthead ul {
+    list-style: none;
+}
+.masthead li {
+    display: inline-block;
+}
+.masthead li + li:before {
+    display: inline-block;
+    content: "\00B7 \00a0";
+    color: #ccc;
+}
+/* searchform*/
+#searchform {
+    position: absolute;
+    top: 54px;
+    right: 30.4%;
+}
+#searchform #s {
+    background: url("/media/img/search.png") no-repeat 5px 6px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    -moz-border-radius: 2px;
+    width: 90px;
+    height: 30px;
+    line-height: 12px;
+    padding: 4px 10px 4px 28px;
+
+    -webkit-transition-duration: 400ms;
+    -webkit-transition-property: width, background;
+    -webkit-transition-timing-function: ease;
+    -moz-transition-duration: 400ms;
+    -moz-transition-property: width, background;
+    -moz-transition-timing-function: ease;
+    -o-transition-duration: 400ms;
+    -o-transition-property: width, background;
+    -o-transition-timing-function: ease;
+}
+#searchform #s:focus {
+    background-color: #f9f9f9;
+    width: 160px;
+}
+.masthead img.avatar {
+    position: relative;
+    float: right;
+    margin-top: -100px;
+    margin-bottom: -100%;
+    margin-right: 10%;
+    width: 200px;
+    background-color: #fff;
+}
+/* post */
+.post {
+    position: relative;
+}
+.post:after {
+    display: block;
+    content: "----------------------------------------------------------------";
+    color: #ccc;
+}
+.post img {
+    max-width: 100%;
+}
+.post li {
+    list-style: none outside none;
+}
+.post ul > li:before {
+    content: "- ";
+    margin-left: -1.25em;
+    color: #ccc;
+}
+.post ol {
+    counter-reset: o-list;
+}
+.post ol > li:before {
+    content: counter(o-list) ") ";
+    counter-increment: o-list;
+    margin-left: -1.85em;
+    color: #ccc;
+}
+
+/* special for li in pre */
+.post pre li {
+    list-style-type: decimal;
+}
+
+.post pre li:before {
+    display: none;
+}
+
+/* meta info */
+.post-info {
+    display: inline-block;
+    margin: -10px 0 -10px;
+    color: #999;
+}
+.post-info + .post-info:before {
+    content: "\2223 \00a0";
+}
+.post-meta:after {
+    content: "----------------------------------------------------------------";
+    display: block;
+    margin-top: -1px;
+    color: #ccc;
+}
+
+/* table of content */
+#table-of-contents {
+    position: fixed;
+    right: 0em;
+    top: 0em;
+    border: 1.5px dashed #b2aaaa;
+    border-radius: 5px;
+    background: rgba(253,253,231,.7);
+    -webkit-box-shadow: 0 0 1em #b9b9b9;
+    -moz-box-shadow: 0 0 1em #b9b9b9;
+    -webkit-border-bottom-left-radius: 10px;
+    -moz-border-radius-bottomleft: 10px;
+    text-align: right;
+    /* ensure doesn't flow off the screen when expanded */
+    max-height: 80%;
+    overflow: auto;
+    z-index: 200;
+}
+
+#table-of-contents h2 {
+    max-width: 20em;
+    font-size: 18px;
+    font-weight: normal;
+    margin: 1em;
+}
+
+#table-of-contents h2:before {
+    content: none;
+}
+
+#table-of-contents h2 #go-top {
+  font-weight: bold;
+  display: none;
+  text-align: center;
+}
+
+#table-of-contents:hover #go-top {
+  display: block;
+}
+
+#table-of-contents ul {
+  margin: 0em 1em 1em 1em;
+}
+
+#table-of-contents li {
+    padding: 0;
+    margin: 1px;
+    font-size: 18px;
+    list-style: none;
+}
+
+#table-of-contents ul>:first-child {
+    color: blue;
+}
+
+#table-of-contents #text-table-of-contents {
+    display: none;
+    text-align: left;
+}
+
+#table-of-contents:hover #text-table-of-contents {
+    display: block;
+    animation-name: fade-in;
+    animation-duration: 0.6s;
+}
+
+/* Author information in postamble */
+div #author-info {
+  background-color: #eee;
+  margin-top: 50px;
+  padding: 5px 15px 5px 15px;
+  border-radius: 5px;
+}
+
+div #author, div #date, div #generator {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+/* copyright */
+div #copyright {
+    display: block;
+    border-top: 1.5px solid #acacac;
+    margin: 30px 0 0;
+    padding-top: 10px;
+    vertical-align: middle;
+    text-align: center;
+    font-size: 14px;
+    color: #999;
+}
+
+/* Set the style for cc icon in copyright */
+div #copyright img:first-child {
+    border: none;
+    margin-left: 0px;
+    margin-right: 5px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Animations */
+@keyframes fade-in {
+  0% {opacity:0;}
+  100% {opacity:1;}
+}
+
+@keyframes fade-out {
+  0% {opacity:1;}
+  100% {opacity:0;}
+}
+
+@keyframes zoom {
+  from {transform:scale(0.5)}
+  to {transform:scale(1)}
+}
+
+/* Responsive
+   -------------------------------------------------- */
+
+@media (min-width: 768px) {
+    /* Increase body padding and font-sizes */
+    body {
+        padding: 40px;
+        font-size: 18px;
+        line-height: 1.75;
+    }
+    h1:before, h2:before, h3:before {
+        display: inline;
+    }
+    .modal-content {
+      width: 100%;
+    }
+}
+
+@media (min-width: 1024px) {
+    body {
+        padding: 40px;
+    }
+    .modal-content {
+      width: 100%;
+    }
+}
+
+
+/* Define org todo faces */
+.PROJECT {
+   color: red;
+}
+
+.TODO {
+   color: red;
+}
+
+.NEXT {
+   color: blue;
+}
+
+.STARTED {
+   color: blue;
+}
+
+.WAITING {
+   color: orange;
+}
+
+.DELEGATED {
+   color: orange;
+}
+
+.DONE {
+   color: green;
+}
+
+.CANCELLED {
+   color: green;
+}
+
+.REF {
+   color: blue;
+}
+
+.SOMEDAY {
+   color: blue;
+}
+
+
+/* indent items*/
+.org-ul {
+   margin-right: 10px;
+}
+
+
+/* Pretty printing styles. Used with prettify.js.
+ *
+ * This version is slight modified based on the original version.
+ *
+ * Name:    Stanley Ng
+ * Email:   stanleyhlng@googlegroups.com
+ *
+ * Reference:
+ * http://code.google.com/p/google-code-prettify/source/browse/trunk/src/prettify.css
+ */
+.pln {
+  color: #bd3613; }
+
+.str {
+  color: #269186; }
+
+.kwd {
+  color: #859900; }
+
+.com {
+  color: #586175;
+  font-style: italic; }
+
+.typ {
+  color: #b58900; }
+
+.lit {
+  color: #2aa198; }
+
+.pun {
+  color: #839496; }
+
+.opn {
+  color: #839496; }
+
+.clo {
+  color: #839496; }
+
+.tag {
+  color: #268bd2; }
+
+.atn {
+  color: #586175; }
+
+.atv {
+  color: #2aa198; }
+
+.dec {
+  color: #268bd2; }
+
+.var {
+  color: #268bd2; }
+
+.fun {
+  color: #FF0000; }
+
+/* Put a border around prettyprinted code snippets. */
+pre.prettyprint {
+  background-color: #042029;
+  padding: 10px;
+  border: 1px solid #E1E1E8; }
+
+/* Specify class=linenums on a pre to get line numbering */
+ol.linenums {
+  color: #4c666c;
+  margin: 0 0 0 40px; }
+
+ol.linenums li {
+  line-height: 18px;
+  padding-left: 12px; }
