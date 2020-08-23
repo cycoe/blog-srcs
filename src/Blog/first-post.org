@@ -1,0 +1,18 @@
+#+TITLE: 記第一次買域名以及搭建個人主頁
+#+DATE: <2017-03-11 Sat>
+#+LAYOUT: post
+#+TAGS: Blog
+#+CATEGORIES: Blog
+
+看到好基友 [[http://yinrs.win][@Yinr]] 搭建了個人主頁，也手癢花 4 塊錢在萬網上買了 =cycoe.win= 域名的一
+年使用權。fork 了 =mzlogin= 的項目（[[https://github.com/mzlogin/mzlogin.github.io][項目主頁]]）在 GitHub Pages 上搭建了各人主頁，然
+後把 =cycoe.win= 域名解析到了 =cycoe.github.io= 上，經過一些小改，自己的主頁終於搭好
+了 :laughing:！最後是去 163 的企業郵箱（[[http://ym.163.com][163企業郵箱註冊]]）申請了基於 =cycoe.win= 域
+名的郵箱，我的新郵箱就是 =cycoe@cycoe.win= 。
+
+** *感謝*
+   :PROPERTIES:
+   :CUSTOM_ID: 感謝
+   :END:
+- GitHub 提供的 GitHub Pages 服務
+- mzlogin 的 Jekyll 模板

@@ -1,0 +1,103 @@
+#+TITLE: 2020-05-30 Candy Master
+#+DATE: <2020-05-30 Sat 16:44>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+** TODO <2020-05-30 Sat> Candy Master
+*** DONE Determine a context
+CLOSED: [2020-05-30 Sat 16:41]
+When you surf the Internet...
+
+*** DONE Keywords
+CLOSED: [2020-05-30 Sat 17:16]
+- browse :: 闲逛，吃草
+- wander :: 闲逛
+- cache :: 快取
+- authentication :: 身份认证
+- popup :: 弹窗
+- login :: 登录
+- register :: 注册
+- CAPTCHA :: 验证码
+- contrived :: 人为的
+- acronym :: 缩写
+- Turing test :: 图灵测试
+- postfix :: 后缀
+- large capacity storages :: 大容量存储器
+- operator :: 操作员
+- backup :: 备份
+- magnetic tapes :: 磁带
+- forum :: 论坛
+- modification :: 修改
+- installation :: 安装
+
+*** DONE Draft
+CLOSED: [2020-05-30 Sat 17:16]
+**** Frame 1
+Good evening guys, I am todays Candy Master Cycoe. Today my topic is when you
+surf the Internet. When you surf the Internet, you may meet some words confusing
+and maybe also interesting. So today I will intorduce some words that you may
+meet someday to you.
+
+**** Frame 2
+When you surf the Internet, you must use a application named `browser` like
+Chrome, Edge or Firefox. `browse` this word origianlly means the cows and goats
+wander around and eat grass. So the word browser vividly describes the gesture
+where you surf the Internet.
+
+**** Frame 3
+When you use the computer, you will always see these two words, cookie and
+cache. 点心 和 快取
+ 
+Cookie in computer stands for a small piece of data sent from a website and
+stored on the user's computer by the user's web browser while the user is
+browsing. Whether you notice it or not, almost websites just need login once,
+and the second time it will login automatically. It is the authentication
+cookies taking effect.
+
+Cache is a technology or software component that stores data so that future
+requests for that data can be served faster. So when you use computer, 360 and
+金山毒霸 always popup a window to tell you that (清除缓存来加速电脑). Here 清除
+缓存 just means clean the cache. Good using of cache could boost your computer,
+sometimes clean the cache will even make your computer slower.
+
+**** Frame 4
+When you are register or logging-in, something will popup like these, all them
+are called CAPTCHA, including 验证码, 滑块, 图像识别 and etc.
+
+CAPTCHA is a contrived acronym of `completely automated public Turing test to
+tell computers and humans apart`, just as its name implies, it is designed for
+telling the difference between humans and computers, and refuses the actions
+made by robots. CAPTCHAs are very important to our private security. Without
+CAPTCHAs, hackers will access our passwords and personal information very
+easily. But there are also some funny CAPTCHAs like these. I think neither
+humans or robots could recognize it.
+
+**** Frame 5
+When you download a file from website, maybe the postfix of it is zip, 7z or
+rar. we always call it an archive or a compressed package. Archive means you
+sort the files (文件) and put theme into the correct drawer, and extract has the
+opposite meaning that you take out a specific file from the archive. Compress
+means you decrease the size of a file by some approaches, and decompress has the
+opposite effect.
+
+Nowadays we always mix using these two words, but in history, they have totally
+difference meaning. In history, there were no large capacity storages, so
+operator would backup data in the magnetic tapes like these. And then sorted the
+tapes on the bookshelves. This action is called `tape archive`, so in some
+modern system, the action that you put some files, images or videos into one
+file is called `archive`. And the action that you decrease the size of archive
+with some tools is called compress.
+
+**** Frame 6
+Imagine your firefox browser was crashed and can never open again, so you
+described this problem in a forum. A guy asked you that you use a vanilla
+version or a customized version. What was he talking about? Actually, vanilla is
+a kind of flavoring and flower, and can be used to extract vanillin (香兰素).
+But in computer softwares, and sometimes also other computing-related systems,
+vanilla stands for those softwares that are not customized from their original
+form, meaning that they are used without any customizations or updates applied
+to them. So if he told you to use a vanilla version means that he told you to
+clean your personal modifications and have a new installation. Maybe this way
+can solve your problem.
+

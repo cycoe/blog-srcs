@@ -1,0 +1,36 @@
+#+TITLE: Emacs 光标移动术
+#+DATE: <2020-05-23 Sat 14:10>
+#+LAYOUT: post
+#+TAGS: Emacs
+#+CATEGORIES: Emacs
+
+#+begin_quote
+[[https://www.gnu.org/software/emacs/][Emacs]] /ˈiːmæks/ or EMACS (Editor
+MACroS) is a family of text editors that are characterized by their
+extensibility. The manual for the most widely used variant, GNU Emacs, describes
+it as "the extensible, customizable, self-documenting, real-time display
+editor". Development of the first Emacs began in the mid-1970s, and work on its
+direct descendant, GNU Emacs, continues actively as of 2020.
+#+end_quote
+
+#+CAPTION: Emacs Icon
+[[https://www.gnu.org/software/emacs/images/emacs.png]]
+
+#+HTML: <!-- more -->
+
+从开始用 Emacs 到现在也有大半年了，但一直还用的 Vim 的那一套光标操作。Vim 那一套
+操作非常好用，尤其是 Text objects 这个概念，对于文本编辑效率具有质的提升。但无奈
+毕竟不是原生支持，与许多插件整合的并不好，在 mini buffer 中也无法使用。还是学会
+Emacs 原生的操作方式更好，本文将记录常用的 Emacs 光标移动操作。
+
+** 基本移动操作
+
+#+CAPTION: 基本移动操作
+| 快捷键 | 功能描述     | 助记     |
+|--------+--------------+----------|
+| C-f    | 向前一个字符 | forward  |
+| C-b    | 向后一个字符 | backward |
+| C-n    | 移动到下一行 | next     |
+| C-p    | 移动到上一行 | previous |
+| M-f    | 向前一个单词 | forward  |
+| M-b    | 向后一个单词 | backward |

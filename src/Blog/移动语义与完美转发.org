@@ -1,0 +1,610 @@
+#+TITLE: 移动语义与完美转发
+#+DATE: <2020-08-15 Sat 22:43>
+#+LAYOUT: post
+#+TAGS: C++
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+=C++11= 标准引入了 =右值引用= 、 =引用折叠= 、 =移动语义= 和 =完美转发= 等概念，我的理解是
+移动语义可通过移交资源管理权的方式避免无谓的拷贝从而提升性能，而完美转发用于通用
+模板中，将参数“原封不动”传递给函数。
+
+#+HTML: <!-- more -->
+
+** 左值与右值
+其实从 C 中就有了左值与右值的概念，当时理解的是“在赋值等号左边的是左值，在右边的
+是右值”。现在看来，左值与右值更多是一种语义上的区分，因为 =const= 对象也不能出现在
+等号左边，但显然它是左值。具名对象一般都为左值，而函数返回的非引用临时变量一般为
+右值。
+
+#+begin_src C++ :eval no
+  int add(int a, int b) { return a + b; }
+
+  int ret;
+  // 没问题，给左值赋值
+  ret = add(1, 2);
+
+  // 错误！无法给右值赋值
+  add(1, 2) = ret;
+#+end_src
+
+** 左值引用与右值引用
+=C++98= 中引入的左值引用就是给变量取一个别名，使用上和变量声明时的名字没有太大区别，
+而 =C++11= 引入的右值引用是用一个变量名绑定了一个右值（一般是一个将亡值）。
+
+#+begin_src C++ :file-name foo.cc :eval no
+  int add(int a, int b) { return a + b; }
+
+  int a = 0;
+
+  int& lRefA = a;        // 正确：对左值绑定左值引用
+  int& lRefN = 0;        // 错误：不能对右值绑定左值引用（编译错误）
+
+  int&& rRefA = a;       // 错误：不能对左值绑定右值引用（编译错误）
+  int&& rRefN = 0;       // 正确：对右值绑定右值引用
+  int&& ret = add(1, 2); // 正确：对右值绑定右值引用，此时返回的临时变量的生命周期由 ret 管理
+
+  /* 注意常量左值引用比较特殊
+   ,* 既可以绑定左值也可以绑定右值
+   ,*/
+  int const& cLRefA = a; // 正确：常量左值引用可以绑定左值
+  int const& cLRefN = 0; // 正确：常量左值引用可以绑定右值
+#+end_src
+
+** 移动构造与移动赋值
+在接触移动语义之前，先简单地实现一个 =String= 类来说明移动语义的应用场景。移动语义
+的核心是移交资源的控制权，同样也是在 =C++ RAII= 体系之内。移动语义可通过移交资源来
+减少重新分配资源的开销从而提高性能
+
+#+begin_src C++ :file-name foo.cc
+  #include <vector>
+  #include <iostream>
+  #include <cstring>
+  #include <algorithm>
+
+  class String
+  {
+  public:
+    static std::size_t cpyCstrCnt;
+    static std::size_t cpyAsgnCnt;
+    static std::size_t movCstrCnt;
+    static std::size_t dstrCnt;
+
+    // 构造函数
+    String(char const* cstr = nullptr);
+    // 拷贝构造函数
+    String(String const& rhs);
+    // 拷贝赋值函数
+    String& operator=(String rhs);
+    // 移动构造函数
+    String(String&& rhs);
+    // 析构函数
+    ~String(void);
+
+  private:
+    char* str = nullptr;
+  };
+
+  std::size_t String::cpyCstrCnt = 0;
+  std::size_t String::cpyAsgnCnt = 0;
+  std::size_t String::movCstrCnt = 0;
+  std::size_t String::dstrCnt = 0;
+
+  String::String(char const* cstr) : str(nullptr)
+  {
+    // 如果 cstr 为空或分配内存失败，则 str 指向 nullptr
+    if (cstr == nullptr)
+    {
+      return;
+    }
+
+    str = new char[strlen(cstr) + 1];
+
+    if (str == nullptr)
+    {
+      return;
+    }
+
+    strncpy(str, cstr, strlen(cstr));
+  }
+
+  String::String(String const& rhs) : String(rhs.str)
+  {
+    ++cpyCstrCnt;
+  }
+
+  String& String::operator=(String rhs)
+  {
+    // 此处使用了名为 copy and swap 或 move and swap 的技巧，可同时用于拷贝赋值和
+    // 移动赋值，具有异常安全和自赋值安全。当传入左值时会隐式拷贝构造一个临时量，
+    // 当传入右值时会隐移动构造一个临时量
+    std::swap(this->str, rhs.str);
+
+    ++cpyAsgnCnt;
+  }
+
+  String::String(String&& rhs)
+  {
+    str = rhs.str;
+    rhs.str = nullptr;
+    ++movCstrCnt;
+  }
+
+  String::~String(void)
+  {
+    delete []str;
+    ++dstrCnt;
+  }
+
+  void clearCnt(void)
+  {
+    String::cpyCstrCnt = 0;
+    String::cpyAsgnCnt = 0;
+    String::movCstrCnt = 0;
+    String::dstrCnt = 0;
+  }
+
+  void outputCnt(void)
+  {
+    std::cout << "Copy Construct: " << String::cpyCstrCnt << std::endl;
+    std::cout << "Copy Assignment: " << String::cpyAsgnCnt << std::endl;
+    std::cout << "Move Construct: " << String::movCstrCnt << std::endl;
+    std::cout << "Destruct: " << String::dstrCnt << std::endl;
+  }
+
+  int main(void)
+  {
+    std::vector<String> svec;
+    svec.reserve(1000);
+
+    // 1. 向 push_back 传入左值
+    String s("Hello, world!");
+    // push_back 拿到的是 s 的左值引用，数组中的 String 使用拷贝构造生成
+    for (int i = 0; i < 1000; ++i) { svec.push_back(s); }
+
+    std::cout << "===== Construct String with left value =====" << std::endl;
+    outputCnt();
+
+    // 清理
+    svec.clear();
+    clearCnt();
+
+    // 2. 向 push_back 传入右值，此处使用了隐式构造，push_back 拿到的是临时量的右
+    // 值引用，数组中元素使用移动构造生成
+    for (int i = 0; i < 1000; ++i) { svec.push_back("Hello, world!"); }
+
+    std::cout << "===== Construct String with right value =====" << std::endl;
+    outputCnt();
+
+    // 清理
+    svec.clear();
+    clearCnt();
+
+    // 3. 使用 std::move 告诉编译器将一个变量当作右值（使用移动语义），将原变量的
+    // 资源控制权移交给新变量，同时作为调用者要保证不再使用原变量
+    svec.push_back(std::move(s));
+
+    std::cout << "===== Construct String with std::move =====" << std::endl;
+    outputCnt();
+
+    // 清理
+    svec.clear();
+    clearCnt();
+
+    // 4. 拷贝赋值
+    String a("Hello, C++!");
+    String b;
+    b = a;
+
+    std::cout << "===== Copy Assignment =====" << std::endl;
+    outputCnt();
+
+    // 清理
+    svec.clear();
+    clearCnt();
+
+    // 5. 移动赋值
+    String c;
+    c = std::move(b);
+
+    std::cout << "===== Move Assignment =====" << std::endl;
+    outputCnt();
+  }
+#+end_src
+
+#+RESULTS[cbcef44ee1f56c23010bf139c219490cd92339a7]:
+#+begin_example
+===== Construct String with left value =====
+Copy Construct: 1000
+Copy Assignment: 0
+Move Construct: 0
+Destruct: 0
+===== Construct String with right value =====
+Copy Construct: 0
+Copy Assignment: 0
+Move Construct: 1000
+Destruct: 1000
+===== Construct String with std::move =====
+Copy Construct: 0
+Copy Assignment: 0
+Move Construct: 1
+Destruct: 0
+===== Copy Assignment =====
+Copy Construct: 1
+Copy Assignment: 1
+Move Construct: 0
+Destruct: 1
+===== Move Assignment =====
+Copy Construct: 0
+Copy Assignment: 1
+Move Construct: 1
+Destruct: 1
+#+end_example
+
+** 引用折叠
+引用折叠规则出现在函数泛型模板中，可总结为：
+1. 右值引用叠加到右值引用仍为右值引用
+2. 其它引用类型叠加为左值引用
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  template <typename T>
+  void f(T&& p)
+  {
+    if (std::is_same<T, int>::value)
+      std::cout << "int" << std::endl;
+    else if (std::is_same<T, int&>::value)
+      std::cout << "int&" << std::endl;
+    else if (std::is_same<T, int&&>::value)
+      std::cout << "int&&" << std::endl;
+    else
+      std::cout << "Unknown type" << std::endl;
+  }
+
+  int main(void)
+  {
+    int i = 0;
+    int&& j = 1;
+
+    // i 为左值，T 被推断为 int& 时 T&& 为 int&&&，折叠为 int& 满足条件
+    f(i);
+    // j 是绑定到 1 的右值引用，但 j 作为一个具名变量本身为左值，因此 T 被推断为 int&
+    f(j);
+    // 1 为右值，因此 T 被推断为 int 时 T&& 为 int&& 满足条件
+    f(1);
+  }
+#+end_src
+
+#+RESULTS[b2a45765432efcef12fe1969199024ec44f06d89]:
+: int&
+: int&
+: int
+
+=T&&= 表现出一种特性，能通过引用折叠规则保持传入参数的引用性质，因此也被称为通过引
+用，完美转发正基于此原理之上
+
+** 完美转发
+转发就是通过一个函数将参数交由另一个函数进行处理，原参数可能是左值也可能是右值，
+同时也可能带有常量性，如果能够原封不动地将参数进行转发那么就是完美转发。
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  void handle(int& i)
+  {
+    std::cout << "Handle int&" << std::endl;
+  }
+
+  void handle(int&& i)
+  {
+    std::cout << "Handle int&&" << std::endl;
+  }
+
+  template<typename T>
+  void forward(T&& i)
+  {
+    handle(i);
+  }
+
+  int main(void)
+  {
+    int i = 0;
+
+    std::cout << "===== Before forward =====" << std::endl;
+    handle(i);
+    handle(0);
+    handle(std::move(i));
+
+    std::cout << "===== After forward =====" << std::endl;
+    forward(i);            // i 是左值转发后仍为左值引用
+    forward(0);            // 0 是右值，forward 函数中使用 i 绑定了 0 的右值引用，
+                           // 但 i 本身是左值，转发后引用类型错误
+    forward(std::move(i)); // 与上条同
+  }
+#+end_src
+
+#+RESULTS[7b444128d7543ed59cccca8fbd4ea44b1abde186]:
+: ===== Before forward =====
+: Handle int&
+: Handle int&&
+: Handle int&&
+: ===== After forward =====
+: Handle int&
+: Handle int&
+: Handle int&
+
+可以看到在经过转发之后参数的引用类型发生了变化，因此不是完美转发。 =C++11= 提供了
+=std::forward= 模板函数用于实现完美转发
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  void handle(int& i)
+  {
+    std::cout << "Handle int&" << std::endl;
+  }
+
+  void handle(int&& i)
+  {
+    std::cout << "Handle int&&" << std::endl;
+  }
+
+  void handle(int const& i)
+  {
+    std::cout << "Handle int const&" << std::endl;
+  }
+
+  void handle(int const&& i)
+  {
+    std::cout << "Handle int const&&" << std::endl;
+  }
+
+  template<typename T>
+  void forward(T&& i)
+  {
+    handle(std::forward<T>(i));
+  }
+
+  int main(void)
+  {
+    int i = 0;
+    int const ci = 1;
+
+    std::cout << "===== Before forward =====" << std::endl;
+    handle(i);
+    handle(0);
+    handle(ci);
+    handle(std::move(ci));
+
+    std::cout << "===== After forward =====" << std::endl;
+    forward(i);
+    forward(0);
+    forward(ci);
+    forward(std::move(ci));
+  }
+#+end_src
+
+#+RESULTS[6114703e6c9dc7bbf95a03a57f8ac8aeeb6b14c0]:
+#+begin_example
+===== Before forward =====
+Handle int&
+Handle int&&
+Handle int const&
+Handle int const&&
+===== After forward =====
+Handle int&
+Handle int&&
+Handle int const&
+Handle int const&&
+#+end_example
+
+** 利用完美转发实现委托机制
+完美转发看起来非常完美，那到底有什么用呢？完美转发在标准库中有很多应用，主要涉及
+模板和函数式编程，此处以构造一个委托类为例
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  template<typename T>
+  class Delegate;
+
+  template<typename Return, typename... Args>
+  class Delegate<Return(Args...)>
+  {
+  public:
+    using FuncType = Return (*)(Args...);
+    Delegate(FuncType func) : __func(func) { }
+    Return operator()(Args... args)
+    {
+      return __func(std::forward<Args>(args)...);
+    }
+
+  private:
+    FuncType __func;
+  };
+
+  void add(int a, int b)
+  {
+    std::cout << "a + b = " << a + b << std::endl;
+  }
+
+  void multiply(int a, int b, int c)
+  {
+    std::cout << "a * b * c = " << a * b * c << std::endl;
+  }
+
+  int main(void)
+  {
+    // 委托做加法计算
+    Delegate<void(int, int)> delegateAdd(add);
+    delegateAdd(1, 2);
+
+    // 委托做乘法计算
+    Delegate<void(int, int, int)> delegateMultiply(multiply);
+    delegateMultiply(1, 2, 3);
+  }
+#+end_src
+
+#+RESULTS[605b8919a09995a0d67091560484fd1893a4f7fe]:
+: a + b = 3
+: a * b * c = 6
+** 利用完美转发实现原位构造
+完美转发在 STL 中有大量的应用，比如 =std::vector::emplace_bakc= 和 =std::make_share=
+等函数模板和类模板，接下来我们通过自己实现一个山寨版的 =emplace_back= 函数来了解原
+位构造的原理
+
+#+begin_src C++ :file-name foo.cc
+  #include <memory>
+  #include <iostream>
+  #include <cstring>
+
+  template<typename T>
+  class vector
+  {
+  public:
+    vector() : __data(nullptr), __size(0) { __data = __alloc.allocate(1000); }
+    void push_back(T&& item);
+    template<typename... Args>
+    void emplace_back(Args... args);
+
+  private:
+    T* __data;
+    std::size_t __size;
+    std::allocator<T> __alloc;
+  };
+
+  template<typename T>
+  void vector<T>::push_back(T&& item)
+  {
+    // 此处将传入的右值 item 完美转发给 String 的移动构造函数，因此使用 push_back
+    // 至少涉及一次函数外的默认构造（也可能是拷贝构造等相近开销的方式）和一次移动构造
+    __alloc.construct(__data + __size++, std::forward<T>(item));
+  }
+
+  template<typename T>
+  template<typename... Args>
+  void vector<T>::emplace_back(Args... args)
+  {
+    // 此处将传入的变参完美转发给 String 的默认构造函数，使用 allocator::construct
+    // 方式在已分配内存上进行原位构造，只涉及一次默认构造
+    __alloc.construct(__data + __size++, std::forward<Args>(args)...);
+  }
+
+  class String
+  {
+  public:
+    static std::size_t dftCstrCnt;
+    static std::size_t cpyCstrCnt;
+    static std::size_t movCstrCnt;
+    static std::size_t dstrCnt;
+
+    // 构造函数
+    String(char const* cstr = nullptr);
+    // 拷贝构造函数
+    String(String const& rhs);
+    // 移动构造函数
+    String(String&& rhs);
+    // 析构函数
+    ~String(void);
+
+  private:
+    char* str = nullptr;
+  };
+
+  std::size_t String::dftCstrCnt = 0;
+  std::size_t String::cpyCstrCnt = 0;
+  std::size_t String::movCstrCnt = 0;
+  std::size_t String::dstrCnt = 0;
+
+  String::String(char const* cstr) : str(nullptr)
+  {
+    // 如果 cstr 为空或分配内存失败，则 str 指向 nullptr
+    if (cstr == nullptr)
+      {
+        return;
+      }
+
+    str = new char[strlen(cstr) + 1];
+
+    if (str == nullptr)
+      {
+        return;
+      }
+
+    strncpy(str, cstr, strlen(cstr));
+
+    ++dftCstrCnt;
+  }
+
+  String::String(String const& rhs) : String(rhs.str)
+  {
+    ++cpyCstrCnt;
+  }
+
+  String::String(String&& rhs)
+  {
+    str = rhs.str;
+    rhs.str = nullptr;
+    ++movCstrCnt;
+  }
+
+  String::~String(void)
+  {
+    delete []str;
+    ++dstrCnt;
+  }
+
+  void clearCnt(void)
+  {
+    String::dftCstrCnt = 0;
+    String::cpyCstrCnt = 0;
+    String::movCstrCnt = 0;
+    String::dstrCnt = 0;
+  }
+
+  void outputCnt(void)
+  {
+    std::cout << "Default Construct: " << String::dftCstrCnt << std::endl;
+    std::cout << "Copy Construct: " << String::cpyCstrCnt << std::endl;
+    std::cout << "Move Construct: " << String::movCstrCnt << std::endl;
+    std::cout << "Destruct: " << String::dstrCnt << std::endl;
+  }
+
+  int main()
+  {
+    ::vector<String> svec1;
+
+    std::cout << "===== Use push back =====" << std::endl;
+    for (int i = 0; i < 1000; ++i)
+      {
+        svec1.push_back(std::move(String("Hello")));
+      }
+    outputCnt();
+
+    clearCnt();
+
+    ::vector<String> svec2;
+
+    std::cout << "===== Use emplace back =====" << std::endl;
+    for (int i = 0; i < 1000; ++i)
+      {
+        svec2.emplace_back("Hello");
+      }
+    outputCnt();
+  }
+#+end_src
+
+#+RESULTS[6de43210eba142fdde4d787f6c94b372cd6706cc]:
+#+begin_example
+===== Use push back =====
+Default Construct: 1000
+Copy Construct: 0
+Move Construct: 1000
+Destruct: 1000
+===== Use emplace back =====
+Default Construct: 1000
+Copy Construct: 0
+Move Construct: 0
+Destruct: 0
+#+end_example

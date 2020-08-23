@@ -1,0 +1,36 @@
+#+TITLE: 如何同步 GitHub 上游更新
+#+DATE: <2017-03-11 Sat>
+#+LAYOUT: post
+#+TAGS: GitHub, Git
+#+CATEGORIES: GitHub
+
+在 GitHub 上進行項目的團隊協作，一般都是 fork 組織倉庫到自己的賬號下，提交補丁後
+再提交 Pull Request。上游倉庫一直保持更新。 由於最近在做 [[https://github.com/LCTT/TranslateProject.git][LCTT]] 項目，經常需要同步
+上游其他人的翻譯，下面就以 [[https://github.com/LCTT/TranslateProject.git][LCTT]] 項目爲例，記錄一下 GitHub 上 fork 倉庫同步上游更
+新的操作。
+
+#+HTML: <!-- more -->
+
+1. 使用 =git remote -v= 查看當前的遠程倉庫別名，輸出如下：
+
+   #+BEGIN_EXAMPLE
+     LCTT    https://github.com/LCTT/TranslateProject.git (fetch)
+     LCTT    https://github.com/LCTT/TranslateProject.git (push)
+     origin  git@github.com:cycoe/TranslateProject.git (fetch)
+     origin  git@github.com:cycoe/TranslateProject.git (push)
+   #+END_EXAMPLE
+
+   其中 =origin= 是自己賬號下的對應遠端倉庫地址別名， =LCTT= 是設定好的上游倉庫地址
+   的別名。此處 LCTT 項目已經幫我們設置好了就不需要另外設置。如果沒有設置上游倉
+   庫地址，可通過 =git remote add 上游倉庫別名 上游倉庫地址= 命令來設置上游倉庫的
+   別名。
+
+2. 同步上游倉庫更新到本地，併合並更新到本地倉庫 master 分支
+
+   #+BEGIN_SRC sh
+     git fetch LCTT          #從上游倉庫抓取更新
+     git checkout master     #切換到 master 分支
+     git merge LCTT/master   #合併上游更新到 master 分支
+   #+END_SRC
+
+3. =git push= 命令推送本地倉庫到 fork 倉庫

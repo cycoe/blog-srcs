@@ -1,0 +1,52 @@
+#+TITLE: 与 C++ 的第一类接触-引言
+#+DATE: <2020-05-27 Wed 21:31>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+最近开始看 /C++ Primer/ 这本书，C++ 这种缝合怪学起来还是非常有满足感的。本文记录一
+下学习过程中遇到的知识点，因为之前有了 C 基础，因此主要记录与 C 代码不同的地方。
+
+#+HTML: <!-- more -->
+
+** 引言
+*** 基本的输入输出
+基本的输入输出使用 =iostream= 对象，其中 =cin= 是输入流对象， =cout= 是输出流对象，
+=std= 是变量的命名空间。
+
+#+TBLNAME: input-1
+|  5 |  6 |
+
+#+begin_src C++ :var input=input-1 :includes <iostream>
+  int v1 = 0, v2 = 0;
+
+  // << 运算符会返回左侧的 iostream 对象
+  // std::endl 会 flush stream buffer
+  std::cout << "Enter two numbers:" << std::endl;
+
+  // 等价于 std::cin >> v1; std::cin >> v2;
+  std::cin >> v1 >> v2;
+  // 为方便演示，使用 table: input-1 中的数据作为输入数据
+  v1 = input[0][0];
+  v2 = input[0][1];
+  std::cout << "The sum of " << v1 << " and " << v2
+  << " is " << v1 + v2 << std::endl;
+#+end_src
+
+#+RESULTS:
+| Enter | two | numbers: |   |     |   |    |    |
+| The   | sum | of       | 5 | and | 6 | is | 11 |
+
+*** 使用循环读取标准输入
+#+begin_src C++ :results none
+  int sum = 0, val = 0;
+
+  // 重复读取到 EOF 时结束，在 UNIX 系统中使用 Ctrl-D
+  while (std::cin >> val) {
+    sum += val;
+   }
+
+  std::cout << "Sum is: "
+  << sum << std::endl;
+#+end_src

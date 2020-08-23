@@ -1,0 +1,95 @@
+#+TITLE: 基於Jekyll引擎的博客服務器搭建
+#+DATE: <2017-04-01 Sat>
+#+LAYOUT: post
+#+TAGS: Linux, Blog, Jekyll
+#+CATEGORIES: Blog
+
+#+BEGIN_QUOTE
+  Transform your plain text into static websites and blogs.
+#+END_QUOTE
+
+#+HTML: <!-- more -->
+
+** 爲什麼要搭建自己的博客服務器
+   :PROPERTIES:
+   :CUSTOM_ID: 爲什麼要搭建自己的博客服務器
+   :END:
+
+之前我們已經利用 GitHub Pages 和 Jekyll 搭建了靜態博客並且託管在了 =github.io= 上，
+並且擁有了不錯的頁面效果以及可用性。那我們爲什麼還要搭建自己的博客服務器呢？因爲
+GitHub 的服務器在美國，訪問體驗並不順暢；並且在我們 Push了項目之後，往往要等待一
+定時間頁面內容纔會刷新。爲了更好的體驗效果，我們將基於[[file:www.raspberrypi.org/][樹莓派]]搭建自己的博客服務器。
+樹莓派爲 3B+，系統爲 =Archlinuxarm-rpi-2=
+
+** 環境搭建
+   :PROPERTIES:
+   :CUSTOM_ID: 環境搭建
+   :END:
+
+*** 安裝 [[https://ruby-china.org/][Ruby]]
+    :PROPERTIES:
+    :CUSTOM_ID: 安裝-rubyurl2
+    :END:
+
+依次運行下面的命令安裝最新的 Ruby 運行環境：
+
+#+BEGIN_SRC sh
+  $ sudo pacman -S ruby
+  $ ruby --version
+  ruby 2.4.0p0 (2016-12-24 revision 57164) [armv7l-linux-eabihf]
+  $ gem --version
+  2.6.8
+#+END_SRC
+
+出現上面的提示說明 Ruby 安裝成功，gem 可以看做是 Ruby 插件的安裝器，一般安裝
+Ruby 後自帶。
+
+*注意：* Archlinux 用普通用戶安裝 Ruby 後會遇到運行 Gem 插件提示找不到命令的情況，
+原因是 Ruby 未自動設置環境變量。解決方法：
+- bash
+打開 =~/.bashrc= 文件，加入以下命令： =export PATH=$PATH:~/.gem/ruby/2.4.0/bin/=
+- fish
+打開 =~/.config/fish/config.fish= 文件（沒有則新建），加入以下命令： =shell set -x
+PATH {$PATH} ~/.gem/ruby/2.4.0/bin=
+
+*** 安裝 [[http://jekyllrb.com/][Jekyll]]
+    :PROPERTIES:
+    :CUSTOM_ID: 安裝-jekyllurl3
+    :END:
+
+#+BEGIN_QUOTE
+  Jekyll is a simple, blog-aware, static site generator for personal, project,
+  or organization sites. Written in Ruby by Tom Preston-Werner, GitHub's
+  co-founder, it is distributed under an open source license.
+#+END_QUOTE
+
+1. 安裝 Jekyll 之前需要先安裝 =bundle= 管理器
+
+#+BEGIN_SRC sh
+  gem install bundle
+#+END_SRC
+
+2. 編輯 =Gemfile= ，在文件中輸入以下內容
+
+#+BEGIN_SRC sh
+  gem 'github-pages', group: :jekyll_plugins
+#+END_SRC
+
+3. 利用 =bundle= 安裝 Jekyll 渲染需要的所有包
+
+#+BEGIN_SRC sh
+  bundle install
+#+END_SRC
+
+4. 到此需要的依賴安裝完畢，若 fork 的其他人的 Jekyll 模板，則直接進入模板目錄下
+   執行 =bundle install= 。
+
+*** 運行 Jekll
+    :PROPERTIES:
+    :CUSTOM_ID: 運行-jekll
+    :END:
+
+- 若要在 =_site= 目錄下生成網站目錄，則運行 =bundle exec jekyll build=
+- 若要運行可本機訪問的服務則運行 =bundle exec jekyll server -w= ，默認本機地址
+  =127.0.0.1:4000=
+- 若要局域網可訪問則需要加上 =bundle exec jekyll server -w --host=0.0.0.0=

@@ -1,0 +1,10 @@
+#+TITLE: convert format of documents with pandoc
+#+DATE: <2018-06-29 Fri 14:33>
+#+LAYOUT: post
+#+TAGS: Linux, Text Process
+#+CATEGORIES: Linux
+
+Pandoc 是一個強大的文檔格式轉換軟件，可以對html、markdown、ppt、doc、pdf 等多種
+格式進行相互轉換，但在將 markdown文件轉換爲 pdf文件的過程中，發現會出現中文編碼
+的問題，因此需要使用如下命令指定渲染的引擎 ~pandoc -f markdown_github my.md -o
+my.pdf --pdf-engine=xelatex -V mainfont="Your Font"~

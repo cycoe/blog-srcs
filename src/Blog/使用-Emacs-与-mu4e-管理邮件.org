@@ -1,0 +1,401 @@
+#+TITLE: 使用 Emacs 与 mu4e 管理邮件
+#+DATE: <2020-02-28 Fri 23:03>
+#+LAYOUT: post
+#+CATEGORIES: Linux, Emacs
+#+TAGS: Emacs, Linux, mu4e, mail
+
+ 在 Linux 下面其实有很多可以使用的邮件客户端，如 KDE 项目中的 Kmail、Gnome 项目
+ 中的 Evolution 和 Mozilla 家族的 Thunderbird。这些客户端都只是简单地试用过，正
+ 好最近将开发编辑器和写作环境从 Neovim 迁到了 Emacs。作为一个操作系统，不能管理
+ 邮件怎么说的过去。可以利用 Emacs 的界面进行邮件管理，可以用 Org-mode 进行邮件写
+ 作，甚至可以用 elisp 写一些插件，岂不美哉？趁最近放假赶紧折腾一下。
+ 
+#+HTML: <!-- more -->
+
+** 邮件同步
+查看其他的博客，发现同步博客最常用的协议是 IMAP。Linux 下支持 IMAP 协议并且下载
+下来的目录结构是 MailDir 结构的工具主要有两个，offlineimap 和 isync。
+*** offlineimap 配置
+offlineimap 是一个由 Python 写成的 IMAP 同步工具，主要的缺点是依赖 Python2 的库，
+并且同步速度不如 isync，因此仅作记录。
+**** 安装
+在 Archlinux 中，可以直接从 community 仓库中安装。
+#+begin_src sh
+  sudo pacman -S offlineimap
+#+end_src
+**** 配置
+安装完成，要进行配置，需要创建一个 ~/.offlineimaprc 文件进行配置。详细的配置过程如下： 
+#+begin_src bash
+  [general]
+  # 此处列出所有要同步的账户名，与下方 [Account] 节中的名字要一致
+  accounts = Netease, QQ
+  maxsyncaccounts = 3
+
+  [Account Netease]
+  # 绑定仓库，与下方的 [Repository] 节中的名字一致
+  localrepository = NeteaseLocal
+  remoterepository = NeteaseRemote
+
+  [Repository NeteaseLocal]
+  type = Maildir
+  # 指定本地保存的路径
+  localfolders = /data/cycoe/Documents/mail/myneteasemail@163.com
+
+  [Repository NeteaseRemote]
+  type = IMAP
+  # 远程 imap 主机
+  remotehost = imap.163.com
+  # 邮箱地址
+  remoteuser = myneteasemail@163.com
+  # 邮箱密码
+  remotepass = ********
+  ssl = yes
+  # *非常重要* 否则提示确实 CA 证书
+  sslcacertfile = /etc/ssl/certs/ca-certificates.crt
+  maxconnections = 1
+  # 是否从服务器上删除邮件
+  realdelete = no
+
+  [Account QQ]
+  localrepository = QQLocal
+  remoterepository = QQRemote
+
+  [Repository QQLocal]
+  type = Maildir
+  localfolders = /data/cycoe/Documents/mail/myqqmail@qq.com
+
+  [Repository QQRemote]
+  type = IMAP
+  remotehost = imap.qq.com
+  remoteuser = myqqmail@qq.com
+  remotepass = ***********
+  ssl = yes
+  sslcacertfile = /etc/ssl/certs/ca-certificates.crt
+  maxconnections = 1
+  realdelete = no
+#+end_src
+至此，通过 =offlineimap -a Netease= 就可以同步指定的账户。
+*** isync 配置
+isync 是一个由 C++ 写成的 IMAP 同步工具，经测试同步速度要比 offlineimap 更快，但
+是同步出来的邮件数量比 offlineimap 更多不知道是怎么回事，目前主要使用这个。
+**** 安装
+在 Archlinux 中，可以直接从 community 仓库中安装。
+#+begin_src sh
+  sudo pacman -S isync
+#+end_src
+**** 配置
+isync 的配置方式与 offlineimap 类似，将如下配置放在 '~/.mbsyncrc' 中，并运行
+`mbsync Netease` 即可更新 Netease 频道，mbsync 以频道的概念管理多个邮箱，可以通
+过类似以下多个配置实现多邮箱管理。
+#+begin_src bash
+  IMAPAccount Netease
+  # Address to connect to
+  Host imap.163.com
+  User myneteasemail@163.com
+  Pass **********
+  # To store the password in an encrypted file use PassCmd instead of Pass
+  # PassCmd "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg"
+  #
+  # Use SSL
+  SSLType IMAPS
+  # The following line should work. If get certificate errors, uncomment the two following lines and read the "Troubleshooting" section.
+  CertificateFile /etc/ssl/certs/ca-certificates.crt
+  #CertificateFile ~/.cert/imap.gmail.com.pem
+  #CertificateFile ~/.cert/Equifax_Secure_CA.pem
+
+  IMAPStore Netease-remote
+  Account Netease
+
+  MaildirStore Netease-local
+  Subfolders Verbatim
+  # The trailing "/" is important
+  Path /data/cycoe/Documents/mail/myneteasemail@163.com/
+  Inbox /data/cycoe/Documents/mail/myneteasemail@163.com/INBOX
+
+  Channel Netease
+  Master :Netease-remote:
+  Slave :Netease-local:
+  # Exclude everything under the internal [Gmail] folder, except the interesting folders
+  Patterns * ![myneteasemail@163.com]* "[myneteasemail@163.com]/INBOX"
+  # Or include everything
+  #Patterns *
+  # Automatically create missing mailboxes, both locally and on the server
+  Create Both
+  # Save the synchronization state files in the relevant directory
+  SyncState *
+
+
+  IMAPAccount QQ
+  # Address to connect to
+  Host imap.qq.com
+  User myqqmail@qq.com
+  Pass **********
+  # To store the password in an encrypted file use PassCmd instead of Pass
+  # PassCmd "gpg2 -q --for-your-eyes-only --no-tty -d ~/.mailpass.gpg"
+  #
+  # Use SSL
+  SSLType IMAPS
+  # The following line should work. If get certificate errors, uncomment the two following lines and read the "Troubleshooting" section.
+  CertificateFile /etc/ssl/certs/ca-certificates.crt
+  #CertificateFile ~/.cert/imap.gmail.com.pem
+  #CertificateFile ~/.cert/Equifax_Secure_CA.pem
+
+  IMAPStore QQ-remote
+  Account QQ
+
+  MaildirStore QQ-local
+  Subfolders Verbatim
+  # The trailing "/" is important
+  Path /data/cycoe/Documents/mail/myqqmail@qq.com/
+  Inbox /data/cycoe/Documents/mail/myqqmail@qq.com/INBOX
+
+  Channel QQ
+  Master :QQ-remote:
+  Slave :QQ-local:
+  # Exclude everything under the internal [Gmail] folder, except the interesting folders
+  Patterns * ![myqqmail@qq.com]* "[myqqmail@qq.com]/INBOX"
+  # Or include everything
+  #Patterns *
+  # Automatically create missing mailboxes, both locally and on the server
+  Create Both
+  # Save the synchronization state files in the relevant directory
+  SyncState *
+#+end_src
+*** Unsafe login
+使用第三方 IMAP 服务同步 163 邮箱时，会提示 Unsafe login 错误，可以通过 [[http://config.mail.163.com/settings/imap/index.jsp?uid=xxxxxx@163.com][网易邮箱
+设置]] 解决。
+
+** mu 邮件管理器
+*** 安装
+#+begin_src bash
+  # 克隆 mu 仓库
+  git clone git://github.com/djcb/mu.git
+  # 生成配置
+  ./autogen.sh
+  # 配置编译设置
+  ./configure
+  # 编译安装
+  make -j 4 && sudo make install
+#+end_src
+*** 配置 mu
+#+begin_src bash
+  # 初始化 mu 监测的邮箱文件夹
+  mu init -m /data/cycoe/Documents/mail/
+  # 建立邮件索引
+  mu index
+#+end_src
+** mu4e 多账户设置
+mu4e (mu for emacs) 是 mu 在 emacs 中实现的一个邮件管理模块。后端调用 mu 进行邮
+件的检索和管理。在 =~/.config/emacs/lisp/= 目录下建立 =init-mu4e.el= 文件，并加入如
+下配置。mu4e 目前原生支持的功能是 context（上下文切换），因此使用上下文切换来模
+拟多账户管理。每次切换账户时，自动设置对应账户的变量。其中最重要的一处为 context
+中的 match-fun 设置。该设置能够保证在同时删除或者归档不同 maildir 下的邮件时，邮
+件能够被移动到对应的 maildir 中。
+#+begin_src elisp
+  (setq mu4e-contexts
+        `( ,(make-mu4e-context
+             :name "netease"
+             :match-func (lambda (msg)
+                           (when msg
+                             (string-match-p "myneteasemail@163.com" (mu4e-message-field msg :maildir)))))))
+#+end_src 
+完整配置如下：
+#+begin_src elisp
+  ;; the exact path may different -- check it
+  (add-to-list 'load-path "/usr/local/share/emacs/site-lisp/mu4e")
+
+  ;; require the mu4e main package
+  (require 'mu4e)
+  ;; use smtpmail to sent mail
+  (require 'smtpmail)
+  ;; convert org content in mu4e to html
+  (require 'org-mime)
+  ;; use org-mode in mu4e-message-mode
+  (require 'org-mu4e)
+
+  ;; set default values about mu4e
+  (setq
+   ;; auto update maildir with isync and index it
+   mu4e-update-interval 300
+   ;; don't do a full cleanup check
+   mu4e-index-cleanup nil
+   ;; don't consider up-to-date dirs
+   mu4e-index-lazy-check t
+   ;; show images in message mode
+   mu4e-view-show-images t
+   ;; set the default download dir for attachment
+   mu4e-attachment-dir "/data/cycoe/downloads"
+   ;; prefer html view
+   mu4e-view-prefer-html t
+   ;; don't save message to sent messages, gmail/imap takes care of this
+   ;; (see the documentation for `mu4e-sent-messages-behavior' if you have
+   ;; additional non-gmail addresses and want assign them different
+   ;; behavior.)
+   mu4e-sent-messages-behavior 'delete
+   )
+
+  ;; set default values for sending mails
+  (setq
+   ;; user agent when send mail
+   mail-user-agent 'mu4e-user-agent
+   ;; 设置邮件发送方法为 smtpmail
+   message-send-mail-function 'smtpmail-send-it
+   ;; 根据 from 邮件头使用正确的账户上下文发送 email.
+   message-sendmail-envelope-from 'header
+   ;; 设置邮箱认证加密方式
+   smtpmail-stream-type 'ssl
+   ;; don't keep message buffers around
+   message-kill-buffer-on-exit t
+   )
+
+  ;; some information about me
+  (setq
+   user-full-name  "Cycoe Joo"
+   ;; set a mail address list using when reply a message
+   mu4e-user-mail-address-list '("myneteasemail@163.com"
+                                 "myqqmail@qq.com")
+   mu4e-compose-signature
+   (concat
+    "Cycoe\n"
+    "BLOG https://cycoe.cc\n")
+   )
+
+  ;; 该函数基于当前所在的 maildir 来判定所账户上下文。
+  ;; (defun mu4e-message-maildir-matches (msg rx)
+  ;;   (when rx
+  ;;     (if (listp rx)
+  ;;         ;; If rx is a list, try each one for a match
+  ;;         (or (mu4e-message-maildir-matches msg (car rx))
+  ;;             (mu4e-message-maildir-matches msg (cdr rx)))
+  ;;       ;; Not a list, check rx
+  ;;       (string-match rx (mu4e-message-field msg :maildir)))))
+
+  ;; 设置 mu4e 上下文
+  (setq mu4e-contexts
+        `( ,(make-mu4e-context
+             :name "Netease"
+             :enter-func (lambda ()
+                           (mu4e-message "Entering Netease context")
+                           ;; update index after switch context, otherwise the
+                           ;; counting is not updated
+                           (mu4e-update-index))
+             :leave-func (lambda () (mu4e-message "Leaving Netease context"))
+             ;; we match based on the contact-fields of the message
+             :match-func (lambda (msg)
+                           (when msg
+                             (string-match-p "myneteasemail@163.com" (mu4e-message-field msg :maildir))))
+
+             :vars '((user-mail-address             . "myneteasemail@163.com")
+                     (mu4e-sent-folder              . "/myneteasemail@163.com/Sent")
+                     (mu4e-drafts-folder            . "/myneteasemail@163.com/Drafts")
+                     (mu4e-trash-folder             . "/myneteasemail@163.com/Trash")
+                     (mu4e-refile-folder            . "/myneteasemail@163.com/Refile")
+                     (smtpmail-smtp-user            . "myneteasemail@163.com")
+                     (smtpmail-default-smtp-server  . "smtp.163.com")
+                     (smtpmail-smtp-server          . "smtp.163.com")
+                     (smtpmail-smtp-service         . 994)
+                     (mu4e-get-mail-command         . "mbsync Netease")
+                     (mu4e-maildir-shortcuts . (("/myneteasemail@163.com/INBOX"   . ?i)
+                                                ("/myneteasemail@163.com/Sent"    . ?s)
+                                                ("/myneteasemail@163.com/Refile"  . ?r)
+                                                ("/myneteasemail@163.com/Trash"   . ?t)
+                                                ("/myneteasemail@163.com/Drafts"  . ?d)))
+                     (mu4e-bookmarks . ( ("maildir:/myneteasemail@163.com/INBOX AND flag:unread AND NOT flag:trashed"   "Unread messages"        ?u)
+                                         ("maildir:/myneteasemail@163.com/INBOX AND date:today..now"                    "Today's messages"       ?t)
+                                         ("maildir:/myneteasemail@163.com/INBOX AND date:7d..now"                       "Last 7 days"            ?w)
+                                         ("maildir:/myneteasemail@163.com/INBOX AND date:1d..now"                       "Last 1 days"            ?o)
+                                         ("maildir:/myneteasemail@163.com/INBOX"                                        "Inbox"                  ?i)
+                                         ("maildir:/myneteasemail@163.com/Sent"                                         "Sent"                   ?s)
+                                         ("maildir:/myneteasemail@163.com/Refile"                                       "Refile"                 ?r)
+                                         ("maildir:/myneteasemail@163.com/Trash"                                        "Trash"                  ?t)
+                                         ("maildir:/myneteasemail@163.com/Drafts"                                       "Drafts"                 ?d)
+                                         ("maildir:/myneteasemail@163.com/INBOX AND mime:image/*"                       "Messages with images"   ?p)))
+                     ))
+
+           ,(make-mu4e-context
+             :name "QQ"
+             :enter-func (lambda ()
+                           (mu4e-message "Switch to the QQ context")
+                           (mu4e-update-index))
+             :match-func (lambda (msg)
+                           (when msg
+                             (string-match-p "myqqmail@qq.com" (mu4e-message-field msg :maildir))))
+
+             :vars '((user-mail-address             . "myqqmail@qq.com")
+                     (mu4e-sent-folder              . "/myqqmail@qq.com/Sent")
+                     (mu4e-drafts-folder            . "/myqqmail@qq.com/Drafts")
+                     (mu4e-trash-folder             . "/myqqmail@qq.com/Trash")
+                     (mu4e-refile-folder            . "/myqqmail@qq.com/Refile")
+                     (smtpmail-smtp-user            . "myqqmail@qq.com")
+                     (smtpmail-default-smtp-server  . "smtp.qq.com")
+                     (smtpmail-smtp-server          . "smtp.qq.com")
+                     (smtpmail-smtp-service         . 465)
+                     (mu4e-get-mail-command         . "mbsync QQ")
+                     (mu4e-maildir-shortcuts . (("/myqqmail@qq.com/INBOX"   . ?i)
+                                                ("/myqqmail@qq.com/Sent"    . ?s)
+                                                ("/myqqmail@qq.com/Refile"  . ?r)
+                                                ("/myqqmail@qq.com/Trash"   . ?t)
+                                                ("/myqqmail@qq.com/Drafts"  . ?d)))
+                     (mu4e-bookmarks . ( ("maildir:/myqqmail@qq.com/INBOX AND flag:unread AND NOT flag:trashed"   "Unread messages"        ?u)
+                                         ("maildir:/myqqmail@qq.com/INBOX AND date:today..now"                    "Today's messages"       ?t)
+                                         ("maildir:/myqqmail@qq.com/INBOX AND date:7d..now"                       "Last 7 days"            ?w)
+                                         ("maildir:/myqqmail@qq.com/INBOX AND date:1d..now"                       "Last 1 days"            ?o)
+                                         ("maildir:/myqqmail@qq.com/INBOX"                                        "Inbox"                  ?i)
+                                         ("maildir:/myqqmail@qq.com/Sent"                                         "Sent"                   ?s)
+                                         ("maildir:/myqqmail@qq.com/Refile"                                       "Refile"                 ?r)
+                                         ("maildir:/myqqmail@qq.com/Trash"                                        "Trash"                  ?t)
+                                         ("maildir:/myqqmail@qq.com/Drafts"                                       "Drafts"                 ?d)
+                                         ("maildir:/myqqmail@qq.com/INBOX AND mime:image/*"                       "Messages with images"   ?p)))
+                     ))))
+
+  ;; start with the first (default) context;
+  ;; default is to ask-if-none (ask when there's no context yet, and none match)
+  (setq mu4e-context-policy 'pick-first)
+
+  (provide 'init-mu4e)
+#+end_src
+** 配置 smtp 发送邮件
+emcas 可以使用 smtpmail 发送邮件，会自动读取 =~/.authinfo= 文件中的账户和密码，因
+此需要在该文件中配置 smtp 相关信息。
+#+begin_src bash
+  machine smtp.163.com login myneteasemail@163.com password xxxxxxxxxx
+  machine smtp.qq.com login myqqmail@qq.com password xxxxxxxxxx
+#+end_src
+** 使用 Org mode 编辑新邮件
+使用 Emacs 管理邮件的一大优势就是可以借助强大的 Org-mode 来写邮件，并自动导出为
+HTML 邮件。生成的邮件为 multipart 的邮件，也就是说同时有 plain 部分和 HTML 部分
+可选。但在实际使用中，=(org-mime-htmlize)= 确实能够将邮件转化为 multipart 邮件，
+但是不知道为什么最后发送出去的邮件只有一个部分。要实现该功能需要在
+=~/.config/emacs/lisp/init-mu4e.el= 中加入如下配置。
+#+begin_src elisp
+  ;; convert org content in mu4e to html and send
+  (require 'org-mime)
+  ;; convert org content in mu4e to html and send
+  (require 'org-mu4e)
+
+  ;; auto enable the org-mu4e-compose-org-mode when enter the mu4e-compose-mode
+  (add-hook 'mu4e-compose-mode-hook
+            (defun do-compose-stuff ()
+              (org-mu4e-compose-org-mode)))
+
+  (defun htmlize-and-send ()
+    "When in an org-mu4e-compose-org-mode message, htmlize and send it."
+    (interactive)
+    (when (member 'org~mu4e-mime-switch-headers-or-body post-command-hook)
+      (org-mime-htmlize)
+      (message-send-and-exit)))
+
+  (add-hook 'org-ctrl-c-ctrl-c-hook 'htmlize-and-send t)
+#+end_src
+** 将邮件加入 TODO 列表中
+如果想要将某封邮件加入代办事项用于记录，可以将如下代码加入 =init-mu4e.el= 中
+#+begin_src elisp
+  ;; store link to message if in header view, not to header query
+  (setq org-mu4e-link-query-in-headers-mode nil)
+  ;; use org-capture to add a new todo
+  (setq org-capture-templates
+        '(("t" "todo" entry (file+headline "/data/cycoe/Documents/Orgs/TODO.org" "Tasks")
+           "* TODO [#A] %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t \"+0d\"))\n%a\n")))
+#+end_src
+至此，在 mu4e 的 header view 或者是 message view 中，输入 =org-capture= 即可自动将
+邮件作为代办事项加入到 =/data/cycoe/Documents/Orgs/TODO.org= 中。

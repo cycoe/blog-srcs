@@ -1,0 +1,227 @@
+#+TITLE: 关于单链表中环的问题
+#+DATE: <2020-07-04 Sat 18:06>
+#+LAYOUT: post
+#+TAGS: C++, Algorithm
+#+CATEGORIES: C++, Algorithm
+
+#+HTML: <!-- more -->
+
+** 问题分析
+
+判断链表中是否有环是非常经典的算法题，其中涉及到许多链表相关的知识并可扩展出很多
+问题。参考 [[https://www.cnblogs.com/yorkyang/p/10876604.html][判断链表中是否有环 ----- 有关单链表中环的问题 - 烂笔头儿 - 博客园]] 并
+用 =C++= 对算法进行了实现。
+
+** 代码实现
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt
+  #include <iostream>
+  #include <fmt/core.h>
+
+  template<typename T>
+  struct Node {
+    Node(T __value, Node<T>* __next = nullptr) : value(__value), next(__next) { }
+    Node* next = nullptr;
+    T value;
+  };
+
+  // 给一个单链表，判断其中是否有环的存在
+  template<typename T>
+  Node<T>* exist_loop(Node<T>* head)
+  {
+    Node<T>* fast = head;
+    Node<T>* slow = head;
+
+    while (slow && fast->next) {
+      slow = slow->next;
+      fast = fast->next->next;
+      if (slow == fast)
+        return slow;
+    }
+    return nullptr;
+  }
+
+  template<typename T>
+  Node<T>* find_loop_entry(Node<T>* head, Node<T>* meet)
+  {
+    while(head && meet) {
+      if (head == meet)
+        return head;
+      head = head->next;
+      meet = meet->next;
+    }
+    return nullptr;
+  }
+
+  template<typename T>
+  std::size_t count_loop_size(Node<T>* node)
+  {
+    Node<T>* fast = node;
+    Node<T>* slow = node;
+    std::size_t size = 0;
+
+    while (slow && fast->next) {
+      slow = slow->next;
+      fast = fast->next->next;
+      ++size;
+      if (slow == fast)
+        return size;
+    }
+    return 0;
+  }
+
+  template<typename T>
+  std::size_t count_distance(Node<T>* start, Node<T>* end)
+  {
+    std::size_t distance = 0;
+    while (start != end && start) {
+      ++distance;
+      start = start->next;
+    }
+    return distance;
+  }
+
+  template<typename T>
+  Node<T>* find_opposite(Node<T>* node)
+  {
+    Node<T>* fast = node;
+    Node<T>* slow = node;
+
+    while (slow && fast->next) {
+      slow = slow->next;
+      fast = fast->next->next;
+      if (fast == node)
+        return slow;
+    }
+    return fast;
+  }
+
+  template<typename T>
+  void delete_loop_link(Node<T>* head, Node<T>* loop_entry)
+  {
+    // 有环链表的释放可分为两步
+    // 1. 第一步是释放环
+    Node<T>* curr = loop_entry;
+    Node<T>* tmp = curr;
+    do
+      {
+        tmp = curr;
+        curr = curr->next;
+        std::cout << fmt::format("Node({0}) ", tmp->value);
+        delete tmp;
+      } while (curr && curr != loop_entry);
+    // 2. 第二步是释放环前面的链表
+    curr = head;
+    while (curr && curr != loop_entry) {
+      tmp = curr;
+      curr = curr->next;
+      std::cout << fmt::format("Node({0}) ", tmp->value);
+      delete tmp;
+    }
+  }
+
+  template<typename T>
+  Node<T>* end_link_to(Node<T>* head, Node<T>* node)
+  {
+    for (; head->next; head = head->next);
+    head->next = node;
+    return head;
+  }
+
+  int main()
+  {
+    // 创建链表
+    Node<int>* head = new Node<int> {1};
+    Node<int>* curr = head;
+    Node<int>* loop_node = head;     // 环出现的节点
+    for (int i = 2; i < 8; ++i) {
+      curr->next = new Node<int> {i};
+      curr = curr->next;
+      if (i == 4)
+        loop_node = curr;            // 将 4 这个节点作为环的入口
+    }
+
+    // 1. 给一个单链表，判断其中是否有环的存在
+    std::cout << fmt::format("Loop {0}.", (exist_loop(head)? "exists": "doesn't exist"))
+              << std::endl;
+    // Node(7) 连到 Node(4)
+    curr->next = loop_node;
+    // 快慢指针相遇的节点
+    Node<int>* meet = exist_loop(head);
+    std::cout << fmt::format("Loop {0}.", (meet? "exists": "doesn't exist"))
+              << std::endl;
+
+    // 2. 如果存在环，找出环的入口点
+    Node<int>* loop_entry = find_loop_entry(head, meet);
+    std::cout << fmt::format("Loop entry is Node({0}).", loop_entry->value) << std::endl;
+
+    // 3. 如果存在环，求出环上节点的个数
+    std::size_t loop_size = count_loop_size(meet);
+    std::cout << fmt::format("Loop size is {0}.", loop_size) << std::endl;
+
+    // 4. 如果存在环，求出链表的长度
+    std::size_t noloop_size = count_distance(head, loop_entry);
+    std::cout << fmt::format("Link size is {0}.", noloop_size + loop_size) << std::endl;
+
+    // 5. 如果存在环，求出环上距离任意一个节点最远的点（对面节点）
+    std::cout << fmt::format("Original node is Node({0}).", meet->value) << std::endl;
+    std::cout << fmt::format("Opposite node is Node({0}).", find_opposite(meet)->value)
+              << std::endl;
+
+    // 6. 释放有环链表
+    std::cout << "Delete link: ";
+    delete_loop_link(head, loop_entry);
+    std::cout << std::endl;
+    head = nullptr;
+
+    // 创建两条相交的链表
+    Node<int>* head_1 = new Node<int> {1};
+    curr = head_1;
+    for (int i = 2; i < 8; ++i) {
+      curr->next = new Node<int> {i};
+      curr = curr->next;
+      if (i == 4)
+        loop_node = curr;            // 将 Node(4) 这个节点作为两条链表的交点
+    }
+    Node<int>* head_2 = new Node<int> {8};
+    head_2->next = new Node<int> {9};
+    head_2->next->next = new Node<int> {10};
+
+    // 7.（扩展）如何判断两个无环链表是否相交
+    // 首先将一条链的末尾连到链的开头，形成有环链
+    end_link_to(head_1, head_1);
+    std::cout << fmt::format("Cross {0}.", (exist_loop(head_2)? "exists": "doesn't exist"))
+              << std::endl;   // 检查是否相交
+    // 将第二条链的最后连到 Node(4)
+    end_link_to(head_2, loop_node);
+    std::cout << fmt::format("Cross {0}.", (exist_loop(head_2)? "exists": "doesn't exist"))
+              << std::endl;   // 检查是否相交
+
+    // 8.（扩展）如果相交，求出第一个相交的节点
+    // 相交点也就是成环后的入口点
+    loop_entry = find_loop_entry(head_2, exist_loop(head_2));
+    std::cout << fmt::format("Cross node is Node({0}).", loop_entry->value) << std::endl;
+
+    // 9. 释放有环链表
+    std::cout << "Delete link: ";
+    delete_loop_link(head_2, loop_entry);
+    std::cout << std::endl;
+    head_1 = head_2 = nullptr;
+  }
+#+end_src
+
+#+RESULTS[cc91f072aed8744669ff8025b54930f5cf230a44]:
+#+begin_example
+Loop doesn't exist.
+Loop exists.
+Loop entry is Node(4).
+Loop size is 4.
+Link size is 7.
+Original node is Node(5).
+Opposite node is Node(7).
+Delete link: Node(4) Node(5) Node(6) Node(7) Node(1) Node(2) Node(3) 
+Cross doesn't exist.
+Cross exists.
+Cross node is Node(4).
+Delete link: Node(4) Node(5) Node(6) Node(7) Node(1) Node(2) Node(3) Node(8) Node(9) Node(10)
+#+end_example

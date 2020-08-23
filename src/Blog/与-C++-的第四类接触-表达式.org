@@ -1,0 +1,30 @@
+#+TITLE: 与 C++ 的第四类接触-表达式
+#+DATE: <2020-06-01 Mon 22:24>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+** 表达式
+*** 优先使用递增递减运算符的后置版本
+[[file:./C++-学习记录/Screenshot_20200531_171609_pgiWcp.png]]
+*** 运算对象可按任意顺序求值
+#+begin_src C++ :eval no
+  while (beg != s.end() && !isspace(*beg))
+    *beg = toupper(*beg++);   // 错误：赋值语句未定义
+  *beg = toupper(*beg);       // 如果先求左侧的值
+  *(beg + 1) = toupper(*beg); // 如果先求右侧的值
+#+end_src
+
+*** 强制类型转换
+#+begin_src C++ :eval no
+  // cast-name<type>(expression)
+
+  // 用 static_cast 将 j 强制转换为 double
+  double slope = static_cast<double>(j) / i;
+  // 用 const_cast 改变运算对象底层 const
+  const char *pc;
+  char *p = const_cast<char*>(pc);   // 合法，但通过 p 写值是未定义的
+  // C 风格的强制类型转换
+  double slope = (double) j / i;
+#+end_src

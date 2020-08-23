@@ -1,0 +1,88 @@
+#+TITLE: Planche training calendar
+#+DATE: <2018-04-13 Fri>
+#+LAYOUT: post
+#+TAGS: planche
+#+CATEGORIES: Personal
+
+#+BEGIN_QUOTE
+  A planche is a skill in [[https://en.wikipedia.org/wiki/Gymnastics][gymnastics]] in which the [[https://en.wikipedia.org/wiki/Human_body][body]] is held parallel to the
+  ground, giving the illusion of floating. It is a move that requires
+  significant [[https://en.wikipedia.org/wiki/Physical_strength][strength]] and [[https://en.wikipedia.org/wiki/Balance][balance]].
+
+  #+CAPTION: Planche
+  [[file:Planche-training-calendar/Planche.jpg]]
+#+END_QUOTE
+
+剛進大學的時候 ，無意間在 B 站看到一個關於俄挺的視頻，能夠完成俄挺成了我的一個夢
+想。本科的時候陸陸續續地練過一段時間，練練俯臥撐和團身，團身也就是剛剛高團 2-3
+秒的程度。後來因爲實在沒什麼進展也就漸漸放棄了。前幾天回家的路上吹了點小風就感冒
+了，意識到自己的小身板太弱，再加上最近想要增重，決定重新開始練習俄挺。
+
+#+HTML: <!-- more -->
+
+*** 2018-04-05
+    :PROPERTIES:
+    :CUSTOM_ID: section
+    :END:
+
+從今天開始練習，因爲也好久沒有做俯臥撐了，目前的水平實在太爛。
+
+- 標準俯臥撐 10 個
+- 衝肩維持 5 秒
+
+*** 2018-04-13
+    :PROPERTIES:
+    :CUSTOM_ID: section-1
+    :END:
+
+練了一個星期的衝肩，每天都在堅持。
+
+#+CAPTION: Planche Lean
+[[file:Planche-training-calendar/plank_lean.jpg]]
+
+- 衝肩維持 10 秒
+- 窄距俯臥撐 10 個
+
+*** 2018-06-10
+    :PROPERTIES:
+    :CUSTOM_ID: section-2
+    :END:
+
+最近右手小臂疼的厲害，應該是跟前幾天每天用鼠標做視頻有關，看來要好好休息幾天了，
+最近下調訓練強度，少用鼠標。。不過值得激動的是，目前已經可以比較輕鬆地做團身了，
+高階團身應該也能 10 來秒了，接下來準備練團身舉腿。
+
+#+CAPTION: Tucked
+[[file:Planche-training-calendar/tucked.jpg]]
+
+- 衝肩維持 30 秒
+- 窄距俯臥撐 25 個
+- 衝肩俯臥撐 15 個
+- 團身維持 10 秒
+- 引體向上 7 個
+
+*** 2018-07-25
+    :PROPERTIES:
+    :CUSTOM_ID: section-3
+    :END:
+
+最近一個月因爲手腕一直還是有點疼，尤其搬重物的時候，也就沒怎麼敢繼續練團身，轉而
+練習引體和前水平。打算先通過前水平鍛鍊背部力量，通過雙力臂鍛鍊手腕力量，等基礎打
+好後再練習俄挺。引體的話其實應該一組能做個 10 個左右，但是後面幾組做的時候因爲可
+能是翻腕了的原因，導致手腕還是會疼，發現在雲梯上練習就沒事了，可能是手的朝向的問
+題。
+
+雙力臂其實還是沒有太大進展，前水平的話一條腿伸直是能保持了，接下來就是要延長持續
+的時間，然後慢慢向雙腿進步。在宿舍也可以每天都練前水平。
+
+另外利用操場上的槓鈴可以做很多其他的訓練，比如正手擡、反手拉、單手拉、臥推。利用
+器材可以取得更好的訓練效果。
+
+*最後有個非常重要的想法：* 在家的這幾天發現，想要找個健身器材齊全的公園實在不是很
+容易，因此希望能做個 App，街健愛好者可以在上面共享健身器材所在的位置，另外可以認
+識附近的街健愛好者。
+
+- 衝肩俯臥撐 20 個
+- 前水平團身 10 秒
+- 單槓硬拉 4 個
+- 引體 10 個

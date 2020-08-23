@@ -1,0 +1,63 @@
+#+TITLE: fcitx 输入法配置
+#+DATE: <2019-11-17 Sun 11:54>
+#+LAYOUT: post
+#+TAGS: Linux, fcitx
+#+CATEGORIES: Linux
+
+fcitx 是 Linux 下最常用的输入法框架之一，另一个是 ibus。这两个框架的关系，就好像
+KDE 与 Gnome 的关系一般。因为在早些年，ibus 是作为 Gnome 的依赖项被默认安装的，
+而 fcitx 被认为与 KDE 共同工作的更好。
+
+fcitx 的安装非常简单，但是想让她在非桌面环境下正常运行，还是需要一番配置的。
+
+#+HTML: <!-- more -->
+
+** 安装
+   :PROPERTIES:
+   :CUSTOM_ID: 安装
+   :END:
+
+安装 fcitx 只需要安装以下几个包即可
+
+#+BEGIN_SRC sh
+  sudo pacman -S fcitx fcitx-rime fcitx-gtk3 fcitx-qt5 fcitx-configtool
+
+  # fcitx: fcitx 可执行主程序
+  # fcitx-rime: fcitx 中的 rime 输入法实现，可根据喜好换为其他输入法
+  # fcitx-gtk3: 使 fcitx 能够在 gtk3 程序中使用
+  # fcitx-qt5: 使 fcitx 能够在 qt5 程序中使用
+  # fcitx-configtool: fcitx 配置工具界面
+#+END_SRC
+
+** 配置环境变量
+   :PROPERTIES:
+   :CUSTOM_ID: 配置环境变量
+   :END:
+
+在 =.xprofile= 文件中加入以下行，使得在 X 启动时，可以自动设置 fcitx 相关的环境变量。
+
+#+BEGIN_SRC sh
+  # export for fcitx
+  export XMODIFIERS="@im=fcitx"
+  export XIM=fcitx
+  export XIM_PROGRAM=fcitx
+  export GTK_IM_MODULE=fcitx
+  export QT_IM_MODULE=fcitx
+#+END_SRC
+
+如果 fcitx 在 gtk 或者 qt 其中一个图形库的程序中无法使用时，很有可能是相对应的环
+境变量没有设置，或者没有安装对应图形库的fcitx 支持。
+
+** fcitx 无法在 Emacs 中使用
+   :PROPERTIES:
+   :CUSTOM_ID: fcitx-无法在-emacs-中使用
+   :END:
+
+前段时间开始使用 Emacs，但发现 fcitx 在 gtk 和 qt 程序下都没有问题，唯独在 Emacs
+下无法使用。在网上搜索了很久找不到答案，最后看到一个看起来不那么靠谱的答案，抱着
+试一试的心态，没想到竟真的解决了。解决办法就是安装 =terminus-font= ，真的不可思议
+是什么原理。
+
+#+BEGIN_SRC sh
+  sudo pacman -S terminus-font
+#+END_SRC

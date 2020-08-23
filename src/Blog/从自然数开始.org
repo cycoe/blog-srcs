@@ -1,0 +1,101 @@
+#+TITLE: 从自然数开始
+#+DATE: <2019-02-28 Thu 10:05>
+#+LAYOUT: post
+#+TAGS: Math, Algorithm
+#+CATEGORIES: Math
+
+** 素数（Prime）
+   :PROPERTIES:
+   :CUSTOM_ID: 素数prime
+   :END:
+
+对于一个自然数 \(n\in\mathbb{N}\)，若其只能被 \(1\) 和它本身整除（即只有两个因
+子），则被称为素数；若其有多于两个因子，则被称为合数。素数是不能够进行质因式分解
+的最小单元，因此合数具有唯一的质因式分解（质因子不可再分）。
+
+#+HTML: <!-- more -->
+
+*** 1 的特殊性
+    :PROPERTIES:
+    :CUSTOM_ID: 的特殊性
+    :END:
+
+\(1\) 能够被 \(1\) 及其自身整除，但为了体系的自洽，不认为 \(1\) 是素数。有如下两
+个原因：
+1. 若 \(1\) 是素数，则任意自然数的质因式分解将不是唯一的。\(6=2\times 3=1\times 2\times 3\)。
+2. 任意素数 \(p\) 可被分解为 \(p=1\times p\)，若 \(1\) 为素数，则 \(p\) 为合数，
+   与 \(p\) 为素数相矛盾。
+
+** 寻找素数
+   :PROPERTIES:
+   :CUSTOM_ID: 寻找素数
+   :END:
+
+针对素数，我们希望研究：
+- 对于任意 \(n\in \mathbb{N}\)，判断其是否为素数；
+- 对于任意 \(n\in \mathbb{N}\)，找到所有小于 \(n\) 的素数，或等价于求小于 \(n\)
+的素数的个数； - 对于任意 \(n\in \mathbb{N}\)，求其质因式分解。
+
+** 质因式分解
+   :PROPERTIES:
+   :CUSTOM_ID: 质因式分解
+   :END:
+
+前几天，看杂志时发现一个有趣的问题，“对任意一个自然数 \(n\)，如何求其所有因子的
+和”。这个问题本身并不困难，但从中可以继续思考质数的相关规律。
+
+既然是要求因子的和，那么我们首先需要用数学语言将因子表示出来。在此之前，我们需要
+先将这个自然数表示出来。
+
+设 \(n\) 有 \(m+1\) 个质因子 \(p_0 < p_1 < \cdots < p_m\)，则存在如下唯一的质因
+式分解
+\begin{equation}
+n = p_0^{a_0} \times p_1^{a_1} \times \cdots \times p_m^{a_m}
+\end{equation}
+
+则 \(n\) 的因子 \(f\) 满足
+\begin{equation}
+    f = p_0^{b_0} \times p_1^{b_1} \times \cdots \times p_m^{b_m}
+\end{equation}
+
+其中
+\begin{equation}
+    \left\{\begin{array}{c}
+        0 \leq b_0 \leq a_0\\
+        0 \leq b_1 \leq a_1\\
+        \vdots\\
+        0 \leq b_m \leq a_m
+    \end{array}\right.,\
+    And \ b_0, b_1, \cdots, b_m \in \mathbb{N}
+\end{equation}
+
+记所有质因子之和为 \(S(n)\)，即为所有满足上式的 \(f\) 之和
+\begin{equation}
+    \begin{split}
+        S(n) &= (p_0^0+p_0^1+\cdots+p_0^{a^0})\times (p_1^0+p_1^1+\cdots+p_1^{a^1})\times \cdots \times (p_m^0+p_m^1+\cdots+p_m^{a^m})\\
+        &= \dfrac{p_0^{a_0+1}-1}{p_0-1}\times \dfrac{p_1^{a_1+1}-1}{p_1-1}\times \cdots \times\dfrac{p_m^{a_m+1}-1}{p_m-1}\\
+        &= \prod\limits_{i=0}^m \dfrac{p_i^{a_i+1}-1}{p_i-1}
+    \end{split}
+\end{equation}
+
+至此，我们已经得到已知自然数 \(n\) 所有因子和 \(S(n)\)的表达式。接下来验证一下，
+\(24\) 的所有因子有\(1, 2, 3, 4, 6, 8, 12, 24\)，求和得 \(S_1(24)=60\)。\(24\)
+的质因式分解为 \(24=2^3\times3^1\)，则
+\(S_2(24)=(2^0+2^1+2^2+2^3)\times(3^0+3^1)=60\)。答案正确！
+
+首先来解决第一个问题。使用计算机进行计算发现，前 \(2^k\) 个质数的
+\(\Pi_p(2^k)\) 与 \(k\) 呈近似线性关系
+\begin{equation}
+    \Pi_p(2^k) = ak + b
+\end{equation}
+
+另外 \(2^k\) 以内的质数的分式乘积 \(\Pi_p(\eta)\) 也与 \(k\) 呈近似线性关系。
+
+设 \(\Pi(n)\) 为前 \(n\) 个自然数的类似分式积表达式
+\begin{equation}
+    \Pi(n) = \dfrac21 \times \dfrac32 \times \cdots \times \dfrac{n}{n-1} = n
+\end{equation}
+
+则前 \(n\) 个质数的 \(\Pi(n)\) 与 \(n\) 呈线性关系。
+
+一个为质数， 一个为自然数，其中必然蕴含着质数分布的某种真理。

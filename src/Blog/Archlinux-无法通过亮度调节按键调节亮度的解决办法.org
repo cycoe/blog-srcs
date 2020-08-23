@@ -1,0 +1,109 @@
+#+TITLE: Archlinux 无法通过亮度调节按键调节亮度的解决办法
+#+DATE: <2019-11-09 Sat 01:50>
+#+LAYOUT: post
+#+TAGS: Linux, AMD, Brightness
+#+CATEGORIES: Linux
+
+最近买了一个新机器小新 Pro13，买来的第一天当然是先装上 Archlinux。装上之后发现无
+法通过键盘上的亮度调节按钮调节屏幕亮度，机器是 AMD 处理器加AMD 核显。刚开始以为
+是 AMD 版本特有的问题，但在网上查了相关的问题后，发现许多 Intel 核显的机器也有类
+似问题。
+
+#+HTML: <!-- more -->
+
+首先排除按键问题，通过 =xev= 命令可以监测到亮度调节按钮被按下，说明按键本身没有问
+题。通过向 =/etc/default/grub= 中加入 ~GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3
+acpi_osi=! acpi="Linux" quiet splash"~ 没有效果，并且反而使得亮度调节按钮失效了。
+
+安装 =xorg-xbacklight= 包，但 =xbacklight= 命令提示 =No outputs have backlight
+property= 。是因为 =xorg-xbacklight=包中提供的 =xbacklight= 命令默认只对 Intel 核显
+有效，在 AMD 核显上会提示 =No outputs have backlight property= 错误。因此需要通过
+ACPI 通道对亮度进行控制。
+
+*解决方法如下：* 安装 ACPI 的亮度控制，替换原 =xbacklight= 命令
+
+#+BEGIN_SRC sh
+  sudo pacman -S acpilight
+#+END_SRC
+
+将当前用户加入 video 组，实现免 root 控制亮度
+
+#+BEGIN_SRC sh
+  sudo gpasswd video -a cycoe
+#+END_SRC
+
+acpilight 兼容 xbacklight 重启之后就可以通过下面命令控制亮度了
+
+#+BEGIN_SRC sh
+  # Get backlight brightness
+  xbacklight -get
+  # Set brightness
+  xbacklight -set 70
+  # Increase brightness
+  xbacklight -inc 10
+  # Decrease brightness
+  xbacklight -dec 10
+#+END_SRC
+
+** 使用 light 替代 acpilight
+   :PROPERTIES:
+   :CUSTOM_ID: 使用-light-替代-acpilight
+   :END:
+
+acpilight 是用 Python 写的脚本工具，由于我对于系统工具的洁癖，还是考虑找个 C 语
+言的替代品，也就找到了 light 这个工具，并且其可以自动检测到亮度调节接口。
+
+#+BEGIN_SRC sh
+  # Install light
+  sudo pacman -S light
+  # Increase brightness
+  light -A 10
+  # Decrease brightness
+  light -U 10
+#+END_SRC
+
+** 使用 clight 利用摄像头自动调节亮度
+   :PROPERTIES:
+   :CUSTOM_ID: 使用-clight-利用摄像头自动调节亮度
+   :END:
+
+#+BEGIN_QUOTE
+  Clight is a C user daemon utility that aims to fully manage your display. It
+  will automagically change screen backlight level to match ambient brightness,
+  as computed by capturing frames from webcam. Moreover, it can manage your
+  screen temperature, just like redshift does. Finally, it can dim your screen
+  after a timeout.
+#+END_QUOTE
+
+简而言之，clight 能够自动控制屏幕亮度、gamma 值、自动变暗、自动熄屏等。通过 AUR
+安装。
+
+#+BEGIN_SRC sh
+  yay -S clight
+#+END_SRC
+
+官方 Wiki 建议安装完成后启用 clightd 服务，虽然并不知道有什么用。
+
+#+BEGIN_SRC sh
+  # Remember to enable Clightd systemd unit!
+  sudo systemctl enable clightd.service
+#+END_SRC
+
+拷贝配置文件。
+
+#+BEGIN_SRC sh
+  cp /etc/default/clight.conf ~/.config/
+#+END_SRC
+
+配置文件中的 =gamma_temp= 取消注释会提示参数个数不对，设置一个或者三个参数也没有用，
+因此直接禁用gamma 值调节。
+
+#+BEGIN_SRC sh
+  ## Gamma temperature during day and night
+  # gamma_temp = [ 6500, 6500 ];
+  ...
+  ## Uncomment to disable gamma support
+  no_gamma = true;
+#+END_SRC
+
+将 =clight= 加入到自启动脚本中。

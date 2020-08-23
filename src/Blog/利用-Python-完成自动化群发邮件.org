@@ -1,0 +1,135 @@
+#+TITLE: 利用 Python 完成自动化群发邮件
+#+DATE: <2020-03-30 Mon 13:22>
+#+LAYOUT: post
+#+CATEGORIES: Python
+#+TAGS: Python
+
+最近我们 Campus TMC 要过九周年生日，因此要给以前的老会员发邮件邀请函。本来打算一
+个一个手动发，后来一看有将近 100 个。本着 /Coding for everything/ 的准则，尝试用 Python 来解决。
+
+#+HTML: <!--more-->
+
+Python 中已经实现了 =stmp= 的相关接口在 =smtplib= 模块中，邮件结构相关的接口在 =email= 模块中。
+
+** 生成通讯录
+在批量发送邮件之前，一定要有一份结构化的通讯录，不管是用 list 也好，用 dict 存储也好。此处，我是使用 =xlrd= 模块从 Excel 表格中读取数据，并将其存储在 dict 中。对于邮件来说，收件人的名字可能会出现重名，但邮件地址应该是唯一的，因此选用邮件地址作为字典的键。
+#+begin_src python :results output
+  def read_contacts(contact_file):
+      """ 讀取聯繫人
+      """
+      contacts = {}
+
+      data = xlrd.open_workbook(contact_file)
+      sheet = data.sheet_by_index(0)
+
+      for row in range(sheet.nrows):
+          email = sheet.cell(row, 6).value.strip()
+          if email == '':
+              continue
+
+          if email.find('/'):
+              emails = email.split('/')
+              for email in emails:
+                  contacts[email] = {}
+                  contacts[email][ZH] = sheet.cell(row, 3).value.strip()
+                  contacts[email][EN] = sheet.cell(row, 1).value.strip()
+          else:
+              contacts[email] = {}
+              contacts[email][ZH] = sheet.cell(row, 3).value.strip()
+              contacts[email][EN] = sheet.cell(row, 1).value.strip()
+
+      del sheet
+      del data
+      return contacts
+#+end_src
+生成的字典结构为 ={key_address: {'zh': value_zh_name, 'en': value_en_name}, ...}。=
+** 定义邮件内容
+第一步是生成邮件对象，代码示例如下：
+#+begin_src python
+  from email.header import Header
+  from email.mime.multipart import MIMEMultipart
+  from email.mime.image import MIMEImage
+  from email.utils import formataddr
+
+  # 定义邮件的主题与内容
+  SUBJECT = 'My best friend {:name}, I sincerely invite you to participate our anniversary activity'
+  # 邮件内容支持 HTML
+  CONTENT = """
+  My best friend {:name},
+  <p>I sincerely invite you to participate our anniversary activity.</p>
+  <p>Here is our post.</p>
+  <div>
+  <div align="center"><img src="cid:post"></div>
+  """
+
+  # 发件人的信息
+  SENDER_NAME = 'Cycoe'
+  SENDER_ADDR = 'cycoe@163.com'
+
+  contacts = read_contacts(PATH_OF_CONTACTS)
+
+  for email in contacts.keys():
+      name = contacts[email][EN]
+      # 生成邮件对象
+      message = MIMEMultipart()
+      # 设置主题、发信人、收信人
+      message['Subject'] = Header(SUBJECT.format(name))
+      message['From'] = formataddr((SENDER_NAME, SENDER_ADDR))
+      message['To'] = formataddr((name, email))
+      # 内容有点特殊，对于 MIMEMultipart 类型的邮件，
+      # 内容是作为 attachment 添加到 message 中
+      content = MIMEText(CONTENT.format(name), _subtype='html', _charset='utf-8')
+      message.attach(content)
+
+      # 加载附件，POST_PATH 是附件在本机上的路径
+      with open(POST_PATH, 'rb') as fp:
+          # 此处的 filename 参数是附件在邮件中显示的名字
+          post = MIMEImage(fp.read(), _subtype='png', filename='post.png')
+          post.add_header('Content-Disposition', 'attachment', filename='post.png')
+          # 该文件头非常重要，Content-ID 一定要对应上面内容中的 cid
+          # 这样图片就会被引用到正文中
+          post.add_header('Content-ID', '<post>')
+          message.attach(post)
+#+end_src
+** 发送邮件
+Python 中使用 =smtplib= 来处理 smtp 协议，示例代码如下：
+#+begin_src python :results output
+  import smtplib
+
+  HOST = 'smtp.163.com'
+  PORT = 25
+  SENDER_ADDR = 'cycoe@163.com'
+  PASSWORD = '*********'
+
+
+  def send_mail(message, email):
+      server = smtplib.SMTP()
+      # 连接服务器
+      try:
+          server.connect(HOST, PORT)
+      except smtplib.SMTPConnectError as e:
+          print(e)
+          return False
+
+      # 登陆
+      try:
+          server.login(SENDER, PASSWORD)
+      except smtplib.SMTPAuthenticationError as e:
+          print(e)
+          return False
+
+      success = False
+      # 发送邮件
+      try:
+          server.sendmail(SENDER_ADDR, [email], msg.as_string())
+          print('郵件發送成功！')
+          success = True
+      except smtplib.SMTPException as e:
+          print('郵件發送失敗！')
+      finally:
+          del message
+          server.quit()
+
+      return success
+#+end_src
+此处有一点需要注意，不要 connect 一次服务器循环发多封邮件，而是每次 connect 发送一封邮件就 quit 重新 connect。否则会被网易服务器当作垃圾邮件而连接错误。

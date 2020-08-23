@@ -1,0 +1,79 @@
+#+TITLE: 与 C++ 的第五类接触-语句
+#+DATE: <2020-06-02 Tue 23:12>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+#+HTML: <!-- more -->
+
+** 语句
+*** try 语句块与异常处理
+在 C++ 中，异常处理包括：
+- =throw= 表达式，用于抛出异常
+- =try= 语句块，包含一个或多个 =catch= 子句
+- 一套 =异常类= ，用于在 =throw= 表达式和相关 =catch= 子句间传递异常的具体信息
+
+**** throw 表达式
+如下代码片断的功能为检查两个 =Sales_item= 对象是否具有相同的 =ISBN= ，是的话输出两个
+对象的和，不是的话返回失败
+#+begin_src C++ :eval no
+  Sales_item item1, item2;
+  cin >> item1 >> item2;
+
+  if (item1.isbn() == item2.isbn()) {
+    cout << item1 + item2 << endl;
+    return 0;
+   } else {
+    cerr << "Data must refer to same ISBN" << endl;
+    return -1;
+   }
+#+end_src
+
+但在实际的程序中，我们可以会想在其它位置处理错误，此时我们不再直接输出一条信息，
+而是抛出一个异常
+#+begin_src C++ :eval no
+  // 若 ISBN 不相同抛出异常
+  if (item1.isbn() != item2.isbn())
+    throw runtime_error("Data must refer to same ISBN");
+  cout << item1 + item2 << endl;
+#+end_src
+
+其中 =runtime_error= 是标准异常类型的一种，定义在 =stdexcept= 头文件中。
+
+**** =try= 语句块
+
+#+begin_src C++ :eval no
+  try {
+    program-statements;
+   } catch (exception-declaration) {
+    handler-statements;
+   } catch (exception-declaration) {
+    handler-statements;
+   } // ...
+#+end_src
+
+为代码加上错误处理
+
+#+begin_src C++ :eval no
+  while (cin >> item1 >> item2) {
+    try {
+      // 此处添加两个 Sales_item 对象的代码
+      // 如果失败抛出一个 runtime_error 异常
+    } catch (runtime_error err) {
+      // 提醒用户两个 ISBN 必须一致，询问是否重新输入
+      cout << err.what()
+           << "\nTry Again?(y/n)" << endl;
+      char c;
+      cin >> c;
+      if (!cin || c == 'n')
+        break;
+    }
+   }
+#+end_src
+
+**** 异常类
+=<stdexcept>= 中定义了一些异常类
+
+#+CAPTION: <stdexcept> 中定义的异常类
+[[file:./C++-学习记录/Screenshot_20200531_194606_v3CH8o.png]]

@@ -1,0 +1,2422 @@
+#+TITLE: C++ Playground
+#+DATE: <2020-06-10 Wed 10:34>
+#+LAYOUT: post
+#+TAGS: C++, Demo
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+** 返回局部变量的引用
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <iostream>
+
+  int &foo() {
+    int i = 0;
+    return i;    // warning: reference to local variable ‘i’ returned
+  }
+
+  int bar() {
+    int i = 0;
+    return i;
+  }
+
+  int main() {
+    // 运行出现 =segmentation fault (core dumped)=
+    // 在 foo 返回时局部变量 i 就会被释放，因此返回的引用是指向已释放内存
+    int i = foo();
+
+    // 函数 bar 返回了一个为右值的 int 型临时变量，因此只能使用常量引用
+    int &ir = bar();         // 错误
+    int const &icr = bar();  // 正确
+  }
+#+end_src
+
+** 引用传递
+这样看来，引用与变量在作为右值时是没有区别的
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  int main() {
+    int i = 10;
+    int &ir = i;
+    int &irr = ir;
+    std::cout << irr << std::endl;
+
+    i = 20;
+    std::cout << ir << std::endl;
+    std::cout << irr << std::endl;
+  }
+#+end_src
+
+#+RESULTS[47ea56febf4deed6daaae68163895b765044bbb3]:
+: 10
+: 20
+: 20
+
+这也就解释了在重载 =<<= 运算符时传入 =ostream= 对象的引用再传出是可行的
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  typedef struct Coor {
+    float x;
+    float y;
+    float z;
+  } Coor;
+
+  std::ostream &operator<<(std::ostream &os, Coor &coor) {
+    std::cout << "(" << coor.x << ", " << coor.y << ", " << coor.z << ")";
+    return os;
+  }
+
+  int main() {
+    Coor coor = {0.0, 1.0, 2.0};
+    std::cout << coor << std::endl;
+  }
+#+end_src
+
+#+RESULTS[c936a7ffbe380203aec809c7fac4b481e53c86c2]:
+: (0, 1, 2)
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  int &foo(int &i) {
+    return ++i;
+  }
+
+  int main() {
+    int i = 10;
+    // foo 返回了 i 的引用，并将 i 的值赋值给 j
+    // i 与 j 是两个不同的变量
+    int j = foo(i);
+    std::cout << "i is " << i << std::endl;
+    std::cout << "j is " << j << std::endl;
+  }
+#+end_src
+
+#+RESULTS[e5c69df79d1f48ba112282cdad90f0027b0e02f4]:
+: i is 11
+: j is 11
+
+** 泛型数组模板
+#+begin_src C++ :file-name foo.cc
+  #include <cassert>
+  #include <cstddef>
+  #include <iostream>
+
+  template<typename T>
+  class Array {
+    // 将 << 运算符的重载函数声明为友元，此处注意一定要声明为模板
+    // 否则编译时会提示重载函数不是一个函数模板
+    template<typename Ty>
+    friend std::ostream &operator<<(std::ostream &os, Array<Ty> const &rhs);
+
+  public:
+    // 构造与析构
+    Array(size_t const size);           // 已知长度
+    Array(Array<T> const &rhs);         // 从另一 Array 拷贝
+    Array(T const *rhs, size_t size);   // 从数组构造
+    Array(T const *beg, T const *end);  // 传入数组的头尾指针
+    ~Array() { delete[] arr; }
+    // 接口
+    size_t size() const;
+    Array<T> &extend(Array<T> const &rhs);
+    // 运算符重载
+    T &operator[](size_t const index);             // 下标运算符
+    Array<T> &operator=(Array<T> const &rhs);      // 赋值运算符
+    Array<T> operator+(Array<T> const &rhs) const; // 两 Array 相加
+    bool operator==(Array<T> const &rhs) const;    // 判断相等
+
+  private:
+    size_t sz = 0;
+    T *arr = nullptr;
+  };
+
+  template<typename T>
+  Array<T>::Array(size_t const size) {
+    sz = size;
+    arr = new T[sz];
+  }
+
+  template<typename T>
+  Array<T>::Array(Array<T> const &rhs) {
+    sz = rhs.sz;
+    arr = new T[sz];
+    for (size_t i = 0; i < sz; ++i) {
+      arr[i] = rhs.arr[i];
+    }
+  }
+
+  template<typename T>
+  Array<T>::Array(T const *rhs, size_t size) {
+    sz = size;
+    arr = new T[sz];
+    for (size_t i = 0; i < sz; ++i) {
+      arr[i] = rhs[i];
+    }
+  }
+
+  template<typename T>
+  Array<T>::Array(T const *beg, T const *end) {
+    sz = end - beg;
+    arr = new T[sz];
+    for (size_t i = 0; i < sz; ++i) {
+      arr[i] = beg[i];
+    }
+  }
+
+  template<typename T>
+  inline size_t Array<T>::size() const {
+    return sz;
+  }
+
+  template<typename T>
+  inline Array<T> &Array<T>::extend(Array<T> const &rhs) {
+    size_t new_size = sz + rhs.sz;
+    T *new_arr = new T[new_size];
+    for (size_t i = 0; i < sz; ++i) {
+      new_arr[i] = arr[i];
+    }
+    for (size_t i = sz; i < new_size; ++i) {
+      new_arr[i] = rhs.arr[i - sz];
+    }
+    delete[] arr;
+    arr = new_arr;
+    sz = new_size;
+    return *this;
+  }
+
+  template<typename T>
+  T &Array<T>::operator[](size_t const index) {
+    assert(index >= 0 && index < sz);
+    return arr[index];
+  }
+
+  template<typename T>
+  std::ostream &operator<<(std::ostream &os, Array<T> const &rhs) {
+    for (size_t i = 0; i < rhs.sz; ++i) {
+      std::cout << rhs.arr[i] << ", ";
+    }
+    return os;
+  }
+
+  template<typename T>
+  Array<T> &Array<T>::operator=(Array<T> const &rhs) {
+    assert(sz == rhs.sz);
+    for (size_t i = 0; i < sz; ++i) {
+      arr[i] = rhs.arr[i];
+    }
+  }
+
+  template<typename T>
+  Array<T> Array<T>::operator+(Array<T> const &rhs) const {
+    size_t size = sz + rhs.sz;
+    Array<T> tmp(size);
+    for (size_t i = 0; i < sz; ++i) {
+      tmp.arr[i] = arr[i];
+    }
+    for (size_t i = sz; i < size; ++i) {
+      tmp.arr[i] = rhs.arr[i - sz];
+    }
+    return tmp;
+  }
+
+  template<typename T>
+  bool Array<T>::operator==(Array<T> const &rhs) const {
+    if (sz != rhs.sz)
+      return false;
+    size_t i;
+    for (i = 0; arr[i] == rhs.arr[i] && i < sz; ++i);
+    return i == sz;
+  }
+
+  int main() {
+    Array<std::string> arrstr1(5);
+    Array<std::string> arrstr2(5);
+    arrstr1[0] = "Hello";
+    arrstr1[1] = "world";
+    arrstr1[2] = "hello";
+    arrstr1[3] = "C++";
+    arrstr1[4] = "!";
+    arrstr2 = arrstr1;    // 赋值操作
+    std::cout << arrstr2 << std::endl;
+
+    int ints[5] = {1, 2, 3, 4, 5};
+    Array<int> arrint1(ints, 5);
+    Array<int> arrint2(ints, ints + 3);
+    std::cout << arrint1 << std::endl;
+    std::cout << arrint2 << std::endl;
+    std::cout << "arrint1 and arrint2 is "
+              << ((arrint1 == arrint2)? "": "not ")    // 判断 arrint1 和 arrint2 是否相等
+              << "equal." << std::endl;
+    Array<int> arrintsum = arrint1 + arrint2;          // 两人 Array 相加
+    std::cout << arrintsum << std::endl;
+    std::cout << arrint1.extend(arrint1) << std::endl; // 用 arrint1 扩展自身
+  }
+#+end_src
+
+#+RESULTS[a5137f1e29eead5dfff975910dfd7aa0a098ca83]:
+: Hello, world, hello, C++, !, 
+: 1, 2, 3, 4, 5, 
+: 1, 2, 3, 
+: arrint1 and arrint2 is not equal.
+: 1, 2, 3, 4, 5, 1, 2, 3, 
+: 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+
+** 可变参数模板
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  void print() { }
+
+  template<typename T, typename... Types>
+  void print(T firstArg, Types... args) {
+    std::cout << firstArg << std::endl;
+    print(args...);
+  }
+
+  int main() {
+    std::string s("world");
+    print(7.5, "hello", s);
+  }
+#+end_src
+
+#+RESULTS[562464abe530a862d8c467008b8665477bafb93d]:
+: 7.5
+: hello
+: world
+** TODO 几种初始化方法的区别
+#+begin_src C++ :file-name foo.cc :eval no
+  #include <string>
+
+  class C {
+  public:
+    C(std::string const& s) {
+      this->s = s;
+    }
+  private:
+    std::string s;
+  };
+
+  int main() {
+    C c1 = "hello";    // 拷贝构造，调用 C(C const&)，等号后面需要的是类型 C
+    C c2("hello");     // 根据传入参数调用对应构造函数，此处调用 C(std::string const &)
+    C c3{"hello"};     // 使用参数列初始化，调用 C(): s("hello")
+    C c4 = {"hello"};  // 还没搞明白
+  }
+#+end_src
+** 实现 =for_each=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <type_traits>
+  #include <vector>
+  #include <cmath>
+
+  // 实现 Python 中的 map 函数
+  // Container: 容器类
+  // Callable: 可调用对象（函数或仿函数）
+  template<typename Container, typename Callable>
+  Container& foreach(Container& c, Callable op) {
+    typename Container::iterator pos;
+    typename Container::iterator end = c.end();
+    for (pos = c.begin(); pos != end; ++pos) {
+      op(*pos);
+    }
+    return c;
+  }
+
+  // 这种写法无法自动推断，只能手动指定
+  template<typename Container, typename Callable>
+  void foreach(typename Container::iterator pos,
+               typename Container::iterator end, Callable op) {
+    while (pos != end) {
+      op(*pos++);
+    }
+  }
+
+  template<typename Iter, typename Callable>
+  void foreach(Iter pos, Iter end, Callable op) {
+    while (pos != end) {
+      op(*pos++);
+    }
+  }
+
+  // 实现 Python 中的 reduce 函数
+  // Container: 容器类
+  // Callable: 可调用对象（函数或仿函数）
+  // 返回值是值传递
+  template<typename Container, typename Callable>
+  auto reduce(Container& c, Callable op) -> std::decay_t<decltype(c[0])> {
+    using ElemType = std::decay_t<decltype(c[0])>;
+
+    // 如果容器为空，返回与容器第一个元素类型相同的零初始化对象，注意此处需要退化
+    if (c.empty()) {
+      return ElemType{};
+    }
+    // 容器长度为 1 时直接返回第一个元素
+    if (c.size() == 1) {
+      return c[0];
+    }
+
+    ElemType ret(c[0]);
+    foreach(c.begin() + 1, c.end(), [&ret, &op](ElemType const& elem) {
+      ret = op(ret, elem);
+    });
+    return ret;
+  }
+
+  template<typename Iter, typename Callable>
+  auto reduce(Iter pos, Iter end, Callable op) -> std::decay_t<decltype(*pos)> {
+    using ElemType = std::decay_t<decltype(*pos)>;
+
+    if (pos == end ) {
+      return ElemType{};
+    }
+    if (end - pos == 1) {
+      return *pos;
+    }
+
+    ElemType ret(*pos);
+    foreach(pos + 1, end, [&ret, &op](ElemType const & elem) {
+      ret = op(ret, elem);
+    });
+    return ret;
+  }
+
+  template<typename Container, typename ElemType>
+  void linspace(Container& c, ElemType const& start,
+                ElemType const& end, ElemType const& sep) {
+    if (!std::is_same<std::decay_t<decltype(c[0])>, ElemType>::value) {
+      std::cerr << "Element in container should be same type with range!\n";
+    }
+    for (ElemType current = start; current < end; current += sep) {
+      c.push_back(current);
+    }
+  }
+
+  int main() {
+    // 初始化一个等差数列
+    std::vector<double> dvec;
+    linspace(dvec, 1.0, 5.0, 0.001);
+
+    // 计算对应的 log 函数值，并乘上步长
+    foreach(dvec.begin(), dvec.end(), [](double& elem) {
+      elem = log(elem) * 0.001;
+    });
+
+    // 求 ln(x) 在 [1, 5] 范围内的积分值
+    double integral = reduce(dvec.begin(), dvec.end(), [](double const& a, double const& b) {
+      return a + b;
+    });
+    std::cout << "Integral of ln(x) in [1, 5] is " << integral << std::endl;
+  }
+#+end_src
+
+#+RESULTS[17a6a20fd979f0c2c7c8d85ff4339e5d5d26f6b0]:
+: Integral of ln(x) in [1, 5] is 4.04638
+** =std::vector= 内存分配策略
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+
+  int main() {
+    std::vector<int> ivec;
+
+    // 在添加元素之前的容量
+    std::cout << "Capacity is " << ivec.capacity() << std::endl;
+    // 添加 24 个元素
+    for (std::vector<int>::size_type pos = 0; pos < 24; ++pos) {
+      ivec.push_back(pos);
+    }
+    // ivec 在不触发重新内存分配之前可保存多少个元素
+    std::cout << "Capacity is " << ivec.capacity() << std::endl;
+    // 设定保留 24 个可用空间
+    ivec.reserve(24);
+    // 当指定的元素个数小于实际的个数时，不会回收内存
+    std::cout << "Capacity is " << ivec.capacity() << std::endl;
+    // 指定保留 48 个可用空间
+    ivec.reserve(48);
+    // 当指定的元素个数大于实际的个数时，会扩展内存
+    std::cout << "Capacity is " << ivec.capacity() << std::endl;
+    // 指定回收多余内存，具体是否回收决定于编译器实现
+    ivec.shrink_to_fit();
+    std::cout << "Capacity is " << ivec.capacity() << std::endl;
+
+    // ivec 的大小是 24 个字节，保存了三个指针，分别是向量头、向量尾后、容量尾后
+    std::cout << sizeof(ivec) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[df2b00c066a2a729dee9a04bb58e0e5f6729e519]:
+: Capacity is 0
+: Capacity is 32
+: Capacity is 32
+: Capacity is 48
+: Capacity is 24
+: 24
+** =std::string= 的一些操作
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <vector>
+
+  using namespace std;
+
+  void find_all(string const& s, string const& pattern) {
+    string::size_type pos = 0;
+    while ((pos = s.find_first_of(pattern, pos)) != string::npos) {
+      cout << "Found index: " << pos
+           << ", element is: " << s[pos] << endl;
+      ++pos;
+    }
+  }
+
+  template<typename RET, typename Con, typename Callable>
+  RET sum(Con const& container, Callable convert) {
+    RET ret{};
+    typename Con::const_iterator pos;
+    typename Con::const_iterator end = container.end();
+    for (pos = container.begin(); pos != end; ++pos) {
+      ret += convert(*pos);
+    }
+    return ret;
+  }
+
+  int main() {
+    string s1("Hello, world!");
+    string s2("world");
+    string punct(",.!");
+
+    find_all(s1, punct);
+
+    string::size_type pos = 0;
+    if ((pos = s1.find(s2)) != string::npos) {
+      cout << "Find " << s2 << " at index " << pos << endl;
+    }
+
+    string s3  = to_string(123);
+    cout << s3 << endl;
+    int ival = stoi(s3);
+    cout << ival << endl;
+    string s4("pi = 3.14159");
+    double pi = stod(s4.substr(s4.find_first_of("+-.1234567890")));
+    cout << "Pi is " << pi << endl;
+
+    vector<string> string_with_digitals{
+      "3.14159",
+      "2.71828",
+      "1.41421"
+    };
+    cout << "Sum of int is " << sum<int>(string_with_digitals, [](string const& s) {
+      return stoi(s);
+    }) << endl;
+    cout << "Sum of double is " << sum<double>(string_with_digitals, [](string const& s) {
+      return stod(s);
+    }) << endl;
+  }
+#+end_src
+
+#+RESULTS[be594a740d1057c8a41ed5df7ab62fa73b83b496]:
+: Found index: 5, element is: ,
+: Found index: 12, element is: !
+: Find world at index 7
+: 123
+: 123
+: Pi is 3.14159
+: Sum of int is 6
+: Sum of double is 7.27408
+** 泛型算法
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <algorithm>
+  #include <vector>
+  #include <list>
+
+  using namespace std;
+
+  int main() {
+    vector<int> ivec{1, 2, 3, 4, 5};
+    list<int> ilist{1, 2, 3, 4, 5};
+    cout << "ivec and ilist is"
+         << (equal(ivec.cbegin(), ivec.cend(), ilist.cbegin()) ? " " : " not ")
+         << "same." << endl;
+  }
+#+end_src
+
+#+RESULTS[cd2f32ae0a0acae34609bfb55bbf5badccd6aceb]:
+: ivec is same.
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <numeric>
+
+  int main() {
+    std::vector<double> ivec{1.2, 2.9, 3.4, 4.5, 5.5};
+    // 注意对于泛型算法第三个参数非常重要，决定了返回值类型
+    std::cout << "Sum is " << std::accumulate(ivec.cbegin(), ivec.cend(), 0) << std::endl;
+    std::cout << "Sum is " << std::accumulate(ivec.cbegin(), ivec.cend(), .0) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[b714489ed53800c3bcf04ac874bde4de0c701897]:
+: Sum is 15
+: Sum is 17.5
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <algorithm>
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    std::cout << "[";
+    // 此处采用 __pos + 1 != __end 而不是 __pos != __end - 1 是因为 list 的迭代器
+    // 没有重载减操作
+    for (; __pos + 1 != __end; ++__pos) {
+      std::cout << *__pos << "， ";
+    }
+    std::cout << *__pos << "]" << std::endl;
+  }
+
+  int main() {
+    std::vector<int> ivec{0, 1, 2, 3, 0, 1, 2};
+    std::vector<int> ivec_new;
+
+    // 将 ivec 中的 0 替换为 42 并写入 ivec_new，注意此处的 back_inserter 生成了一
+    // 个插入迭代器
+    std::replace_copy(ivec.begin(), ivec.end(), std::back_inserter(ivec_new), 0, 42);
+    print_items(ivec_new.cbegin(), ivec_new.cend());
+
+    // 将大于 1 的值替换为 1，注意此处因为 ivec_new 中本来已经有相同数量的值，直接覆盖
+    std::replace_copy_if(ivec.begin(), ivec.end(), ivec_new.begin(),
+                         [](int const& elem) { return elem > 1; }, 1);
+    print_items(ivec_new.cbegin(), ivec_new.cend());
+
+    // 直接在 ivec 上修改
+    std::replace_if(ivec.begin(), ivec.end(),
+                    [](int const& elem) { return elem > 1; }, 1);
+    print_items(ivec.cbegin(), ivec.cend());
+
+    std::fill(ivec.begin(), ivec.end(), 0);
+    print_items(ivec.cbegin(), ivec.cend());
+
+    for (std::size_t count = 0; count < 5; ++count) {
+      ,*std::inserter(ivec, ivec.begin() + 2) = count + 1;
+    }
+    print_items(ivec.cbegin(), ivec.cend());
+
+    auto back_insertor = std::back_inserter(ivec_new);
+    for (std::size_t count = 0; count < 5; ++count) {
+      ,*back_insertor = count + 1;
+    }
+    print_items(ivec_new.cbegin(), ivec_new.cend());
+  }
+#+end_src
+
+#+RESULTS[4047fbacba3e7c98cc5972323a7eb48dfe190d1f]:
+: [42， 1， 2， 3， 42， 1， 2]
+: [0， 1， 1， 1， 0， 1， 1]
+: [0， 1， 1， 1， 0， 1， 1]
+: [0， 0， 0， 0， 0， 0， 0]
+: [0， 0， 5， 4， 3， 2， 1， 0， 0， 0， 0， 0]
+: [0， 1， 1， 1， 0， 1， 1， 1， 2， 3， 4， 5]
+
+消除重复的单词
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <algorithm>
+  #include <vector>
+  #include <deque>>
+
+  using namespace std;
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    std::cout << "[";
+    for (; __pos + 1 != __end; ++__pos) {
+      std::cout << *__pos << "， ";
+    }
+    std::cout << *__pos << "]" << std::endl;
+  }
+
+  template<typename Con>
+  void elim_dups(Con& container) {
+    // 排序
+    sort(container.begin(), container.end());
+    // 将无重复的元素放在开头，并返回最后一个不重复元素之后位置的迭代器
+    auto end_unique = unique(container.begin(), container.end());
+    // 消除重复的元素
+    container.erase(end_unique, container.end());
+  }
+
+  int main() {
+    vector<int> ivec{1, 0, 2, 3, 1, 2, 0};
+    deque<string> sdeque{
+      "hello",
+      "world",
+      "C++",
+      "hello",
+      "C++"
+    };
+    elim_dups(ivec);
+    print_items(ivec.cbegin(), ivec.cend());
+    elim_dups(sdeque);
+    print_items(sdeque.cbegin(), sdeque.cend());
+  }
+#+end_src
+
+#+RESULTS[0d71f74fff551a03d6b5b0576e5ee676c530d418]:
+: [0， 1， 2， 3]
+: [C++， hello， world]
+
+谓词
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <algorithm>
+  #include <vector>
+
+  using namespace std;
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    std::cout << "[";
+    for (; __pos + 1 != __end; ++__pos) {
+      std::cout << *__pos << "， ";
+    }
+    std::cout << *__pos << "]" << std::endl;
+  }
+
+  // 交换迭代器元素的模板实现
+  template<typename Iter>
+  void swap(Iter const __iter_a, Iter const __iter_b) {
+    typename iterator_traits<Iter>::value_type tmp;
+    tmp = *__iter_a;
+    ,*__iter_a = *__iter_b;
+    ,*__iter_b  = tmp;
+  }
+
+  // 冒泡排序的模板实现，此处的 Predicate 称为二元谓词
+  template<typename Iter, typename Predicate>
+  void sort(Iter const __beg, Iter __end, Predicate __predicate) {
+    Iter pos = __beg;
+    for (; __beg + 1 != __end; --__end) {
+      for (pos = __beg; pos + 1 != __end; ++pos) {
+        if (!__predicate(*pos, *(pos + 1))) {
+          swap(pos, pos + 1);
+        }
+      }
+    }
+  }
+
+  int main() {
+    vector<string> svec{
+      "hello",
+      "world",
+      "evil",
+      "C++",
+      "elegant",
+      "Python"
+    };
+    // 自定义排序条件，此处使用了 lambda 模板，C++20 才加入的特性
+    ::sort(svec.begin(), svec.end(), []<typename T>(T const& a, T const& b) {
+        return a < b;
+      });
+    print_items(svec.cbegin(), svec.cend());
+
+    ::sort(svec.begin(), svec.end(), []<typename T>(T const& a, T const& b) {
+        return a.size() < b.size();
+      });
+    print_items(svec.cbegin(), svec.cend());
+
+    // 将 svec 先按字典序重排，再使用 stable_sort 保持相同长度的 string 的顺序
+    std::sort(svec.begin(), svec.end());
+    std::stable_sort(svec.begin(), svec.end(), []<typename T>(T const& a, T const& b) {
+        return a.size() < b.size();
+      });
+    print_items(svec.cbegin(), svec.cend());
+
+    // 此处需要显式指明迭代器类型，若使用 auto 会返回 normal_iterator 类型，需要使
+    // 用 static_cast 进行类型转换
+    vector<string>::const_iterator iter_sep;
+    // 打印长度大于 4 的元素，partition 将元素分为两部分，前面为满足一元谓词的元素，
+    // 返回值为不满足条件的最后一个元素的后一个迭代器
+    iter_sep = std::partition(svec.begin(), svec.end(), []<typename T>(T const& a) {
+        return a.size() > 4;
+      });
+    print_items(svec.cbegin(), iter_sep);
+  }
+#+end_src
+
+#+RESULTS[ba4b852d2ed0c3342e41592d0abc0d85ab4ad3e0]:
+: [C++， Python， elegant， evil， hello， world]
+: [C++， evil， world， hello， Python， elegant]
+: [C++， evil， hello， world， Python， elegant]
+: [elegant， Python， hello， world]
+
+lambda 表达式，闭包
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <algorithm>
+  #include <vector>
+  #include <functional>
+
+  using namespace std;
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    std::cout << "[";
+    for (; __pos + 1 != __end; ++__pos) {
+      std::cout << *__pos << "， ";
+    }
+    std::cout << *__pos << "]" << std::endl;
+  }
+
+  // 一个闭包模板
+  template<typename T>
+  auto longer_than(T const& __pivot) {
+    // 返回一个一元谓词（模板谓词），lambda 表达式拷贝捕获了 __pivot 局部变量作为
+    // 成员，之后每次调用谓词都可使用 __pivot 的值。若采用引用捕获则需注意生命周期
+    // 和变量变化
+    return [__pivot]<typename U> (U const& elem) { return elem.size() > __pivot; };
+  }
+
+  template<typename U, typename T>
+  bool longer_than(U const& elem, T const& __pivot) {
+    return elem.size() > __pivot;
+  }
+
+  int main() {
+    vector<string> svec{
+      "hello",
+      "world",
+      "evil",
+      "C++",
+      "elegant",
+      "Python"
+    };
+
+    vector<string>::const_iterator iter_sep;
+    // 打印长度大于 4 的元素
+    iter_sep = partition(svec.begin(), svec.end(), longer_than(4));
+    print_items(svec.cbegin(), iter_sep);
+    // 打印长度大于 5 的元素
+    iter_sep = partition(svec.begin(), svec.end(), longer_than(5));
+    print_items(svec.cbegin(), iter_sep);
+    // 使用 std::bind 绑定参数，在 functional 头文件中
+    iter_sep = partition(svec.begin(), svec.end(), bind(longer_than<string, size_t>, placeholders::_1, 4));
+    print_items(svec.cbegin(), iter_sep);
+  }
+#+end_src
+
+#+RESULTS[53ee7a973bbf5fcf54427426f7cce4ddfd378cdb]:
+: [hello， world， Python， elegant]
+: [elegant， Python]
+: [elegant， Python， world， hello]
+
+=std::bind= 的用法
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <functional>
+
+  using namespace std;
+  using namespace std::placeholders;
+
+  template<typename Arg>
+  void print(Arg const& arg) {
+    cout << arg << endl;
+  }
+
+  template<typename Arg, typename... Args>
+  void print(Arg arg, Args... args) {
+    cout << arg << ", ";
+    print(args...);
+  }
+
+  int main() {
+    print("evil", "C++", "elegant", "Python");
+    auto f = bind(print<string, string, string, string>, "evil", _1, "elegant", _2);
+    f("C++", "Python");
+  }
+#+end_src
+
+#+RESULTS[95f101246937be3cf7e183a10feb5b07db340971]:
+: evil, C++, elegant, Python
+: evil, C++, elegant, Python
+
+使用 =std::bind= 重排参数顺序
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <functional>
+  #include <algorithm>
+
+  using namespace std;
+  using namespace std::placeholders;
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    std::cout << "[";
+    for (; __pos + 1 != __end; ++__pos) {
+      std::cout << *__pos << "， ";
+    }
+    std::cout << *__pos << "]" << std::endl;
+  }
+
+  template<typename T1, typename T2>
+  bool shorter(T1 const& a, T2 const& b) {
+    return a.size() > b.size();
+  }
+
+  int main() {
+    vector<string> svec{
+      "devil",
+      "C++",
+      "elegant",
+      "Python"
+    };
+
+    sort(svec.begin(), svec.end(), shorter<string, string>);
+    print_items(svec.cbegin(), svec.cend());
+
+    sort(svec.begin(), svec.end(), bind(shorter<string, string>, _2, _1));
+    print_items(svec.cbegin(), svec.cend());
+  }
+#+end_src
+
+#+RESULTS[101eeb4b56aefc76682c9010bd8ffd13ae7fc901]:
+: [elegant， Python， devil， C++]
+: [C++， devil， Python， elegant]
+** 迭代器的一些高级用法
+
+从字符串流读取数据
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <sstream>
+  #include <iterator>
+  #include <vector>
+  #include <numeric>>
+
+  using namespace std;
+
+  template<typename Iter>
+  void print_items(Iter __pos, Iter const __end) {
+    if (__pos == __end) {
+      return;
+    }
+
+    // 定义一个 pre 变量缓存迭代器的返回值，对于流迭代器无法预测何时到达流的尾部
+    typename Iter::value_type pre;
+    std::cout << "[";
+    for (pre = *__pos++; __pos != __end; pre = *__pos++) {
+      std::cout << pre << "， ";
+    }
+    std::cout << pre << "]" << std::endl;
+  }
+
+  // 从流中读取数据到插入迭代器
+  template<typename IStream, typename Insert_Iter>
+  void data_from_stream(IStream& __is, Insert_Iter __insert_iter) {
+    // TRICK 萃取迭代器所指元素的类型，但该类型无法直接通过
+    // Insert_Iter::value_type 获取，直接获取为 void，参照
+    // https://stackoverflow.com/questions/16165635/why-the-value-type-difference-type-pointer-reference-of-back-insert-iterator-fro
+    using Type = typename Insert_Iter::container_type::value_type;
+    // 初始化 __is 流的一个 Type 型迭代器
+    std::istream_iterator<Type> is_iter(__is);
+    // 默认初始化为尾后迭代器
+    std::istream_iterator<Type> eof;
+
+    while (is_iter != eof) {
+      ,*__insert_iter = *is_iter++;
+    }
+  }
+
+  int main() {
+    // 初始化一个字符串流
+    stringstream ss{"123 456 789"};
+    vector<int> ivec;
+
+    // 使用自定义的方式将流中数据写入输出流
+    data_from_stream(ss, std::back_inserter(ivec));
+    print_items(ivec.cbegin(), ivec.cend());
+
+    // 标准库提供了更为简便的方式，从输入流拷贝到 vector
+    stringstream ssd{"3.14 1.41 2.56"};
+    vector<double> dvec;
+    std::copy(std::istream_iterator<double>(ssd),
+              std::istream_iterator<double>(),
+              std::back_inserter(dvec));
+    print_items(dvec.cbegin(), dvec.cend());
+
+    // 甚至还可以更简单，直接从输入流拷贝到输出流
+    stringstream ssd2{"3.14 1.41 2.56"};
+    std::copy(std::istream_iterator<double>(ssd2),
+              std::istream_iterator<double>(),
+              std::ostream_iterator<double>(std::cout, ", "));
+    std::cout << std::endl;
+
+    // 或者利用泛型的 print_items 函数模板，从输入流自定义输出
+    stringstream ssd3{"3.14 1.41 2.56"};
+    print_items(std::istream_iterator<double>(ssd3),
+                std::istream_iterator<double>());
+  }
+#+end_src
+
+#+RESULTS[1792bb9e5c1a1d5e430141afd46f079f1f60f9f2]:
+: [123， 456， 789]
+: [3.14， 1.41， 2.56]
+: 3.14, 1.41, 2.56, 
+: [3.14， 1.41， 2.56]
+
+将数据写到输出流迭代器
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <sstream>
+  #include <algorithm>
+  #include <iterator>
+  #include <vector>
+
+  int main() {
+    // 从流中读取数据，排序后输出到标准输出流
+    std::stringstream ss{"1 3 2 5 4"};
+    std::istream_iterator<int> is_iter(ss), eof;
+    std::vector<int> ivec;
+    // 输入流迭代器不支持随机访问，因此不能直接排序
+    std::copy(is_iter, eof, std::back_inserter(ivec));
+    std::sort(ivec.begin(), ivec.end());
+    std::ostream_iterator<int> os_iter(std::cout, " ");
+    // 从此处可以看出流迭代器与插入迭代器类似
+    std::copy(ivec.begin(), ivec.end(), os_iter);
+  }
+#+end_src
+
+#+RESULTS[111e34f491c79baeb139c6cfd3d072acf1ec66dd]:
+: 1 2 3 4 5
+
+** 关联容器
+
+统计单词数量
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt
+  #include <iostream>
+  #include <string>
+  #include <sstream>
+  #include <iterator>
+  #include <algorithm>
+  #include <map>
+  #include <fmt/core.h>
+
+  using namespace std;
+
+  void word_count(string const __text, ostream_iterator<string> __os_iter) {
+    stringstream ss(__text);
+    istream_iterator<string> is_iter(ss), eof;
+    map<string, size_t> counter;
+
+    while (is_iter != eof) {
+      string buf = *is_iter++;
+      transform(buf.begin(), buf.end(),
+                buf.begin(), static_cast<int(*)(int)>(tolower));
+      ++counter[buf];
+    }
+
+    for (auto const& w : counter) {
+      *__os_iter++ = fmt::format("{0} occurs {1} times.", w.first, w.second);
+    }
+  }
+
+  int main() {
+    string text("Hello world hello Evil C++ hello c++ world");
+    word_count(text, ostream_iterator<string>(cout, "\n"));
+  }
+#+end_src
+
+#+RESULTS[8fcd3c7da33e98f3fd1fd4bc3210de2486fe5b5b]:
+: c++ occurs 2 times.
+: evil occurs 1 times.
+: hello occurs 3 times.
+: world occurs 2 times.
+
+在 =set= 中自定义比较函数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <set>
+
+  struct Point {
+  public:
+    Point(double __x = .0, double __y = .0) : x(__x), y(__y) { }
+    friend std::ostream& operator<< (std::ostream& os, Point const& p) {
+      os << "(" << p.x << ", " << p.y << ")" << std::endl;
+    }
+    double x, y;
+  };
+
+  bool compare_point(Point const& a, Point const& b) {
+    if (a.x == 0 && b.x == 0) {
+      return a.y < b.y;
+    }
+    if (a.x == 0) {
+      return false;
+    }
+    if (b.x == 0) {
+      return true;
+    }
+
+    return a.y / a.x < b.y / b.x;
+  }
+
+  bool strict_compare_point(Point const& a, Point const& b) {
+    return a.x < b.x || a.y < b.y;
+  }
+
+  int main() {
+    std::set<Point, decltype(compare_point)*> points(compare_point);
+    points.emplace(1, 2);
+    points.emplace(1, 3);
+    points.emplace(2, 4);
+    for (Point const& point : points) {
+      std::cout << point;
+    }
+
+    std::set<Point, decltype(strict_compare_point)*> spoints(strict_compare_point);
+    spoints.emplace(1, 2);
+    spoints.emplace(1, 3);
+    spoints.emplace(2, 4);
+    for (Point const& point : spoints) {
+      std::cout << point;
+    }
+  }
+#+end_src
+
+#+RESULTS[02e7a8b134d66ce773107c19aa5a9aa57bddd452]:
+: (1, 2)
+: (1, 3)
+: (1, 2)
+: (1, 3)
+: (2, 4)
+
+#+begin_src C++ :file-name foo.cc
+  #include <map>
+  #include <iostream>
+
+  int main()
+  {
+    // m 中进行了值初始化，因此 m 中有个 std::pair<int, int>(0, 0)
+    std::map<int, int> m;
+    m[0] = 1;
+    std::cout << m.begin()->first << ", " << m.begin()->second << std::endl;
+    if(m.find(0) != m.end()) {
+      auto& item = *m.find(0);
+      std::cout << item.first << ", " << item.second << std::endl;
+    }
+  }
+#+end_src
+
+#+RESULTS[c2537903b9c7887ebe5a398aad91003b03d54f39]:
+: 0, 1
+: 0, 1
+
+从 =multimap= 中找出所有与 =key= 绑定的值
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <map>
+
+  int main()
+  {
+    std::multimap<std::string, std::string> mm = {
+      {"duck", "run"},
+      {"dog", "run"},
+      {"duck", "fly"}
+    };
+
+    // 第一种方法是手动遍历 map
+    std::cout << "The first method to find duck." << std::endl;
+    auto pos = mm.begin();
+    while (pos != mm.end()) {
+      if (pos->first == "duck") {
+        std::cout << "duck can " << pos->second << std::endl;
+      }
+      ++pos;
+    }
+
+    // 第二种方法是利用 find 和 count
+    std::cout << "The second method to find duck." << std::endl;
+    auto count = mm.count("duck");
+    auto entries = mm.find("duck");
+    while (count) {
+      std::cout << "duck can " << entries->second << std::endl;
+      ++entries;
+      --count;
+    }
+
+    // 第三种方法是利用 lower_bound 和 upper_bound
+    std::cout << "The third method to find duck." << std::endl;
+    for (auto beg = mm.lower_bound("duck"), end = mm.upper_bound("duck");
+         beg != end; ++beg) {
+      std::cout << "duck can " << beg->second << std::endl;
+    }
+
+    // 第四种方法是利用 equal_range
+    std::cout << "The forth method to find duck." << std::endl;
+    for (auto pos = mm.equal_range("duck");
+         pos.first != pos.second; ++pos.first) {
+      std::cout << "duck can " << pos.first->second << std::endl;
+    }
+  }
+#+end_src
+
+#+RESULTS[a7953a96e3bad6f7256667f402e9b9eba0c1cdfb]:
+#+begin_example
+The first method to find duck.
+duck can run
+duck can fly
+The second method to find duck.
+duck can run
+duck can fly
+The third method to find duck.
+duck can run
+duck can fly
+The forth method to find duck.
+duck can run
+duck can fly
+#+end_example
+
+将自定义的类型作为 =key= 时需要定义类型的哈希方法和 ==== 操作符
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <unordered_map>
+  #include <hash_map>
+
+  struct Person {
+    Person(std::string const& __name, std::size_t const __age) :
+      name(__name), age(__age) { }
+    std::string name;
+    std::size_t age;
+  };
+
+  // 哈希函数
+  std::size_t hasher(Person const& __person) {
+    return std::hash<std::string>()(__person.name);
+  }
+
+  bool equal_person(Person const& lhs, Person const& rhs) {
+    return lhs.name == rhs.name;
+  }
+
+  int main() {
+    // 定义类型别名，比一般的 map 多两个类型
+    using person_multimap = std::unordered_map<Person,
+                                               std::string,
+                                               decltype(hasher)*,
+                                               decltype(equal_person)*>;
+    // 定义电话薄，24 是桶的大小
+    person_multimap book(24, hasher, equal_person);
+    book.insert(std::make_pair(Person("Alisa", 25), "123-456-789"));
+    book.insert(std::make_pair(Person("Bob", 26), "324-783-192"));
+    book.insert(std::make_pair(Person("Tim", 23), "583-125-372"));
+    std::cout << "Alisa's telephone number is "
+              << book.find(Person("Alisa", 25))->second << std::endl;
+    std::cout << "Bucket size of key Alisa is "
+              << book.bucket_size(book.bucket(Person("Alisa", 25))) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[46edb5ab578eab99002b96e218a09fc216211701]:
+: Alisa's telephone number is 123-456-789
+: Bucket size of key Alisa is 1
+
+** =std::format=
+
+需要等待编译器支持，目前仍需使用 =fmt= 第三方库
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt
+  #include <iostream>
+  // 需要 C++20 标准支持
+  // #include <format>
+  // fmt 第三方库
+  #include <fmt/core.h>
+
+  int main() {
+    std::cout << fmt::format("{1}, {0}.", "world", "hello");
+  }
+#+end_src
+
+#+RESULTS[dbd5d093b54731d12793f234a2f6cbb33c38a3d7]:
+: hello, world.
+
+** =range= 与 =view= 视图
+
+=ranges= 功能目前编译器还未实现，需要自己安装 =ranges v3= 头文件。惰性求值的特性不错，
+就是编译太慢了
+
+#+begin_src C++ :file-name foo.cc
+  #include <vector>
+  #include <iostream>
+  #include <range/v3/action.hpp>
+  #include <range/v3/view.hpp>
+  #include <range/v3/numeric.hpp>
+  #include <range/v3/algorithm.hpp>
+  #include <range/v3/iterator.hpp>
+
+  using namespace ranges;
+
+  int main() {
+    int total = ranges::accumulate(
+                                 view::ints(1) |
+                                 view::transform([](int i) {return i * i;}) |
+                                 view::take(100),
+                                 0);
+    std::cout << total << std::endl;
+
+    // std::vector<int> ivec{0, 2, 2, 1, 4, 6, 4, 3, 1};
+    // std::vector<int> result = ivec | actions::sort | actions::unique;
+    // ranges::copy(result, ranges::ostream_iterator<int>(std::cout, " "));
+  }
+#+end_src
+
+#+RESULTS[6d2d64feb402f6ec3e6181fc2375252ad23f14c3]:
+
+一个老派的方式为
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <algorithm>
+  #include <numeric>
+
+  int main() {
+    std::vector<int> ivec;
+    for (int i = 1; i < 101; ++i) {
+      ivec.push_back(i);
+    }
+
+    // 前 10 个平方数的和
+    std::transform(ivec.begin(), ivec.end(),
+                   ivec.begin(), [](int i) { return i * i; });
+    std::cout << std::accumulate(ivec.cbegin(), ivec.cend(), 0) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[b65f92e506743701abd4515809d79e8fdcfbbe57]:
+: 338350
+
+=g++= 对 =C++20= 标准有了部分支持，需要指定 =-std=c++20=
+
+#+begin_src C++ :file-name foo.cc :flags -std=c++20
+  #include <iostream>
+  #include <ranges>
+
+  using namespace std;
+
+  int main()
+  {
+    for (auto i : views::iota(0, 10)
+           | views::filter([](int i) { return i % 2; })
+           | views::transform([](int i) { return i * i; }))
+      cout << i << " ";
+  }
+#+end_src
+
+#+RESULTS[01c735dc4e51f24b04cadee81cb4331209a15e96]:
+: 1 9 25 49 81
+
+#+begin_src C++ :file-name foo.cc :flags -std=c++2a
+  #include <ranges>
+  #include <memory>
+  #include <iostream>
+  #include <string>
+  #include <vector>
+
+  namespace std {
+  namespace ranges {
+
+  template <input_range _Vp>
+  class cycle_view : public view_interface<cycle_view<_Vp>>
+  {
+  private:
+    struct _Sentinel;
+
+    struct _Iterator
+    {
+    private:
+      friend _Sentinel;
+      using _Vp_iter = iterator_t<_Vp>;
+
+      _Vp_iter _M_current = _Vp_iter();
+      cycle_view* _M_parent = nullptr;
+    public:
+      using iterator_category = typename iterator_traits<_Vp_iter>::iterator_category;
+      using value_type = range_value_t<_Vp>;
+      using difference_type = range_difference_t<_Vp>;
+
+      _Iterator() = default;
+
+      constexpr _Iterator(cycle_view& __parent, _Vp_iter __current)
+        : _M_current(std::move(__current)),
+          _M_parent(std::__addressof(__parent)) {}
+
+      constexpr range_reference_t<_Vp> operator*() const
+      { return *_M_current; }
+
+      constexpr _Vp_iter operator->() const
+        requires __detail::__has_arrow<_Vp_iter> && copyable<_Vp_iter>
+      { return _M_current; }
+
+      constexpr _Iterator& operator++()
+      {
+        ++_M_current;
+        if(_M_current == ranges::end(_M_parent->_M_base))
+          _M_current = ranges::begin(_M_parent->_M_base);
+
+        return *this;
+      }
+
+      constexpr void operator++(int)
+      {
+        ++*this;
+      }
+
+      constexpr _Iterator operator++(int) requires forward_range<_Vp>
+      {
+        auto __tmp = *this;
+        ++*this;
+        return __tmp;
+      }
+
+      friend constexpr bool operator==(const _Iterator& __x, const _Iterator& __y)
+        requires equality_comparable<_Vp_iter>
+      { return __x._M_current == __y._M_current; }
+    };
+
+    struct _Sentinel
+    {
+    private:
+      sentinel_t<_Vp> _M_end = sentinel_t<_Vp>();
+
+      constexpr bool __equal(const _Iterator& __i) const
+      {
+        return __i._M_current == _M_end;
+      }
+    public:
+      _Sentinel() = default;
+
+      constexpr explicit _Sentinel(cycle_view& __parent) :
+        _M_end(ranges::end(__parent._M_base)) {}
+
+      friend constexpr bool operator==(const _Iterator& __x, const _Sentinel& __y)
+      { return __y.__equal(__x); }
+    };
+
+    _Vp _M_base = _Vp();
+  public:
+      cycle_view() = default;
+
+      constexpr cycle_view(_Vp __base): _M_base(std::move(__base)) {}
+
+      constexpr _Iterator begin()
+      {
+          return {*this, ranges::begin(_M_base)};
+      }
+
+      constexpr auto end()
+      {
+        if constexpr (common_range<_Vp>)
+          return _Iterator{*this, ranges::end(_M_base)};
+        else
+          return _Sentinel{*this};
+      }
+  };
+
+  template <input_range _Range>
+  cycle_view(_Range &&) -> cycle_view<views::all_t<_Range>>;
+
+  namespace views {
+    inline constexpr __adaptor::_RangeAdaptorClosure cycle
+    = [] <viewable_range _Range> (_Range&& __r)
+    {
+      return cycle_view { std::forward<_Range>(__r) };
+    };
+  } // namespace views
+
+  template <input_range _Vp1, input_range _Vp2>
+  class zip_view : public view_interface<zip_view<_Vp1, _Vp2>>
+  {
+  private:
+    struct _Sentinel;
+
+    struct _Iterator
+    {
+    private:
+      friend zip_view;
+      friend _Sentinel;
+      using _Vp1_iter = iterator_t<_Vp1>;
+      using _Vp2_iter = iterator_t<_Vp2>;
+
+      _Vp1_iter _M_current1 = _Vp1_iter();
+      _Vp2_iter _M_current2 = _Vp2_iter();
+      zip_view* _M_parent = nullptr;
+    public:
+      using iterator_category = typename iterator_traits<_Vp1_iter>::iterator_category;
+      using value_type = std::pair<range_value_t<_Vp1>, range_value_t<_Vp2>>;
+      using difference_type = range_difference_t<_Vp1>;
+
+      _Iterator() = default;
+
+      constexpr _Iterator(zip_view& __parent,
+        _Vp1_iter __current1, _Vp2_iter __current2) :
+        _M_current1(std::move(__current1)),
+        _M_current2(std::move(__current2)),
+        _M_parent(std::__addressof(__parent)) {}
+
+      constexpr std::pair<range_reference_t<_Vp1>, range_reference_t<_Vp2>>
+      operator*() const
+      { return std::make_pair(std::ref(*_M_current1), std::ref(*_M_current2)); }
+
+      constexpr std::pair<_Vp1_iter, _Vp2_iter> operator->() const
+        requires __detail::__has_arrow<_Vp1_iter> &&
+            __detail::__has_arrow<_Vp2_iter>
+      { return std::make_pair(_M_current1, _M_current2); }
+
+      constexpr _Iterator& operator++()
+      {
+        ++_M_current1;
+        ++_M_current2;
+        //if(_M_current1 == ranges::end(_M_parent->_M_base1)
+        //	|| _M_current2 == ranges::end(_M_parent->_M_base2))
+        return *this;
+      }
+
+      constexpr void operator++(int)
+      { ++*this; }
+
+      constexpr _Iterator operator++(int) requires forward_range<_Vp1> && forward_range<_Vp2>
+      {
+        auto __tmp = *this;
+        ++*this;
+        return __tmp;
+      }
+
+      friend constexpr bool operator==(const _Iterator& __x, const _Iterator& __y)
+        requires equality_comparable<_Vp1_iter> && equality_comparable<_Vp2_iter>
+      { return __x._M_current1 == __y._M_current1 && __x._M_current2 == __y._M_current2; }
+    };
+
+    struct _Sentinel
+    {
+    private:
+      std::pair<sentinel_t<_Vp1>, sentinel_t<_Vp2>> _M_end =
+        std::make_pair(sentinel_t<_Vp1>(), sentinel_t<_Vp2>());
+
+      constexpr bool __equal(const _Iterator& __i) const
+      {
+        return __i._M_current1 == _M_end.first || __i._M_current2 == _M_end.second;
+      }
+    public:
+      _Sentinel() = default;
+
+      constexpr explicit _Sentinel(zip_view& __parent): _M_end(std::make_pair(
+        ranges::end(__parent._M_base1), ranges::end(__parent._M_base2))) {}
+
+      friend constexpr bool operator==(const _Iterator& __x, const _Sentinel& __y)
+      { return __y.__equal(__x); }
+    };
+
+    _Vp1 _M_base1 = _Vp1();
+    _Vp2 _M_base2 = _Vp2();
+  public:
+    zip_view() = default;
+
+    constexpr zip_view(_Vp1 __base1, _Vp2 __base2): _M_base1(std::move(__base1)),
+      _M_base2(std::move(__base2)) {}
+
+    constexpr _Iterator begin()
+    { return {*this, ranges::begin(_M_base1), ranges::begin(_M_base2)}; }
+
+    constexpr auto end()
+    {
+      //if constexpr (common_range<_Vp1> && common_range<_Vp2>)
+      //	return _Iterator{*this, ranges::end(_M_base1), ranges::end(_M_base2)};
+      //else
+        return _Sentinel{*this};
+    }
+  };
+
+
+  template <input_range _Vp1, input_range _Vp2>
+  inline constexpr bool enable_borrowed_range<zip_view<_Vp1, _Vp2>> = true;
+
+  template <input_range _Range1, input_range _Range2>
+  zip_view(_Range1&&, _Range2&&) -> zip_view<views::all_t<_Range1>, views::all_t<_Range2>>;
+
+  namespace views {
+    inline constexpr __adaptor::_RangeAdaptor zip
+    = [] <viewable_range _Range1, viewable_range _Range2> (_Range1&& __r1, _Range2&& __r2)
+    {
+      return zip_view { std::forward<_Range1>(__r1), std::forward<_Range2>(__r2) };
+    };
+  } // namespace views
+
+  } // namespace ranges
+  } // mamespace std
+
+  using namespace std;
+
+  namespace vs = std::ranges::views;
+  namespace rs = std::ranges;
+
+  int main() {
+    vector v1 {"甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"};
+    vector v2 {"子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"};
+
+    auto a = v1 | vs::cycle;
+    auto b = v2 | vs::cycle;
+    auto c = vs::zip(a, b) | vs::take(60);
+
+    for(auto&& [x, y]: c)
+      cout<<x<<y<<" ";
+    cout<<"\n";
+
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[e53f9603175e312ac37d1dcc26af2bba707abbb6]:
+: 甲子 乙丑 丙寅 丁卯 戊辰 己巳 庚午 辛未 壬申 癸酉 甲戌 乙亥 丙子 丁丑 戊寅 己卯 庚辰 辛巳 壬午 癸未 甲申 乙酉 丙戌 丁亥 戊子 己丑 庚寅 辛卯 壬辰 癸巳 甲午 乙未 丙申 丁酉 戊戌 己亥 庚子 辛丑 壬寅 癸卯 甲辰 乙巳 丙午 丁未 戊申 己酉 庚戌 辛亥 壬子 癸丑 甲寅 乙卯 丙辰 丁巳 戊午 己未 庚申 辛酉 壬戌 癸亥
+** 动态内存
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt
+  #include <iostream>
+  #include <memory>
+  #include <fmt/core.h>
+
+  struct Point {
+    Point(double __x, double __y) : x(__x), y(__y) {
+      std::cout << fmt::format("Pointer({0}, {1}) is constructed.\n", x, y);
+    }
+    ~Point() {
+      std::cout << fmt::format("Pointer({0}, {1}) is deconstructed.\n", x, y);
+    }
+    friend std::ostream& operator<<(std::ostream& os, Point const& p) {
+      return std::cout << fmt::format("Pointer({0}, {1})", p.x, p.y);
+    }
+    double x = 0.0l;
+    double y = 0.0l;
+  };
+
+  int main() {
+    std::cout << "Make shared pointer p." << std::endl;
+    std::shared_ptr<Point> p = std::make_shared<Point>(1.0, 2.0);
+
+    std::cout << "Copy shared pointer q from p." << std::endl;
+    std::shared_ptr<Point> q(p);
+    std::cout << *q << fmt::format(" has {0} references.", q.use_count())
+              << std::endl;
+
+    std::cout << "Let p point to a new Point." << std::endl;
+    p.reset(new Point(3.0, 4.0));
+
+    std::cout << "Construct a point with no name assigned." << std::endl;
+    std::make_shared<Point>(5.0, 6.0);
+
+    std::cout << "Now all Points will be deconstructed." << std::endl;
+  }
+#+end_src
+
+#+RESULTS[065736ff2b65edcc4bf34cb7034a79f14638ca4f]:
+#+begin_example
+Make shared pointer p.
+Pointer(1.0, 2.0) is constructed.
+Copy shared pointer q from p.
+Pointer(1.0, 2.0) has 2 references.
+Let p point to a new Point.
+Pointer(3.0, 4.0) is constructed.
+Construct a point with no name assigned.
+Pointer(5.0, 6.0) is constructed.
+Pointer(5.0, 6.0) is deconstructed.
+Now all Points will be deconstructed.
+Pointer(1.0, 2.0) is deconstructed.
+Pointer(3.0, 4.0) is deconstructed.
+#+end_example
+
+利用 =shared_ptr= 实现对象共享底层数据
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <memory>
+  #include <vector>
+  #include <string>
+
+  // StrBlob 的代理指针类
+  class StrBlobProxy;
+  class ConstStrBlobProxy;
+
+  class StrBlob {
+  public:
+    // 友元
+    friend std::ostream& operator<< (std::ostream& os, StrBlob const& rhs);
+    friend StrBlobProxy;
+    friend ConstStrBlobProxy;
+
+    // 类型别名
+    using size_type = std::vector<std::string>::size_type;
+    using iterator = StrBlobProxy;
+    using const_iterator = ConstStrBlobProxy;
+
+    // 构造函数
+    StrBlob() : data(std::make_shared<std::vector<std::string>>()) { }
+    StrBlob(std::initializer_list<std::string> il) :
+      data(std::make_shared<std::vector<std::string>>(il)) { }
+
+    size_type size() const { return data->size(); }
+    bool empty() const { return data->empty(); }
+    void push_back(std::string const& s) { data->push_back(s); }
+    void pop_back();
+    std::string& front();
+    std::string& back();
+    std::string const& front() const;
+    std::string const& back() const;
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
+  private:
+    std::shared_ptr<std::vector<std::string>> data;
+    void check(size_type i, std::string const& msg) const;
+  };
+
+  // 代理指针类
+  class StrBlobProxy {
+  public:
+    // 构造函数
+    StrBlobProxy() : curr(0) { }
+    StrBlobProxy(StrBlobProxy const& rhs) :
+      wptr(rhs.wptr.lock()), curr(rhs.curr) { }
+    StrBlobProxy(StrBlob& __str_blob, std::size_t __index = 0) :
+      wptr(__str_blob.data), curr(__index) { }
+    StrBlobProxy(StrBlob const& __str_blob, std::size_t __index = 0) :
+      wptr(__str_blob.data), curr(__index) { }
+
+    // 运算符重载
+    StrBlobProxy& operator++() {
+      ++curr;
+      return *this;
+    }
+    StrBlobProxy operator++(int) {
+      StrBlobProxy tmp(*this);
+      ++curr;
+      return tmp;
+    }
+    StrBlobProxy& operator--() {
+      --curr;
+      return *this;
+    }
+    StrBlobProxy operator--(int) {
+      StrBlobProxy tmp(*this);
+      --curr;
+      return tmp;
+    }
+    StrBlobProxy operator+(std::size_t offset) {
+      StrBlobProxy tmp(*this);
+      tmp.curr += offset;
+      return tmp;
+    }
+    std::string& operator*() {
+      if (std::shared_ptr<std::vector<std::string>> sptr; (sptr = wptr.lock())) {
+        return (*sptr)[curr];
+      } else {
+        throw  std::runtime_error("Unbound StrBlob pointer");
+      }
+    }
+    bool operator==(StrBlobProxy const& rhs) {
+      return curr == rhs.curr;
+    }
+    bool operator!=(StrBlobProxy const& rhs) {
+      return curr != rhs.curr;
+    }
+  protected:
+    std::shared_ptr<std::vector<std::string>>
+    check(std::size_t, std::string const &) const;
+    std::weak_ptr<std::vector<std::string>> wptr;
+    std::size_t curr;     // 在数组中的当前位置
+  };
+
+  /// 从 StrBlobProxy 派生出常量指针类
+  class ConstStrBlobProxy : public StrBlobProxy {
+  public:
+    using StrBlobProxy::StrBlobProxy;
+    std::string const& operator*() {
+      if (std::shared_ptr<std::vector<std::string> const> sptr; (sptr = wptr.lock())) {
+        return (*sptr)[curr];
+      } else {
+        throw  std::runtime_error("Unbound StrBlob pointer");
+      }
+    }
+  private:
+    std::weak_ptr<std::vector<std::string> const> wptr;
+  };
+
+  void StrBlob::check(size_type i, std::string const& msg) const
+  {
+    if (i >= data->size())
+      throw std::out_of_range(msg);
+  }
+
+  std::string& StrBlob::front()
+  {
+    check(0, "front on empty StrBlob.");
+    return data->front();
+  }
+
+  std::string& StrBlob::back()
+  {
+    check(0, "back on empty StrBlob.");
+    return data->back();
+  }
+
+  std::string const& StrBlob::front() const
+  {
+    check(0, "front on empty StrBlob.");
+    return data->front();
+  }
+
+  std::string const& StrBlob::back() const
+  {
+    check(0, "back on empty StrBlob.");
+    return data->back();
+  }
+
+  void StrBlob::pop_back()
+  {
+    check(0, "pop_back on empty StrBlob.");
+    data->pop_back();
+  }
+
+  StrBlob::iterator StrBlob::begin() {
+    return StrBlobProxy(*this, 0);
+  }
+
+  StrBlob::iterator StrBlob::end() {
+    return StrBlobProxy(*this, data->size());
+  }
+
+  StrBlob::const_iterator StrBlob::begin() const {
+    return ConstStrBlobProxy(*this, 0);
+  }
+
+  StrBlob::const_iterator StrBlob::end() const {
+    return ConstStrBlobProxy(*this, data->size());
+  }
+
+  std::ostream& operator<< (std::ostream& os, StrBlob const& rhs)
+  {
+    if (rhs.data->empty())
+      return os;
+
+    StrBlob::iterator __pos = rhs.begin();
+    StrBlob::iterator const __end = rhs.end();
+
+    os << "[";
+    for (; __pos + 1 != __end; ++__pos) {
+      os << *__pos << "， ";
+    }
+    return os << *__pos << "]" << std::endl;
+  }
+
+  int main()
+  {
+    // b1 和 b2 共享同样的底层数据
+    StrBlob b1 = {"hello", "world", "evil"};
+    std::cout << b1;
+    StrBlob b2 = b1;
+    b2.push_back("C++");
+    std::cout << b1;
+  }
+#+end_src
+
+#+RESULTS[6f81188ae68f9aea03c25ecb8390f71f921e699e]:
+
+在 =shared_ptr= 中使用自定义的 =delete= 操作
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt
+  #include <iostream>
+  #include <memory>
+  #include <string>
+  #include <fmt/core.h>
+
+  struct Connection {
+    Connection(int* const __descriptor) {
+      std::cout << fmt::format("Connected to descriptor {0}.", *__descriptor) << std::endl;
+      descriptor = *__descriptor;
+    }
+    int descriptor;
+  };
+
+  Connection connect(int* const __descriptor) {
+    return Connection(__descriptor);
+  }
+
+  void disconnect(Connection* con) {
+    std::cout << fmt::format("Disconnected from descriptor {0}.", con->descriptor) << std::endl;
+  }
+
+  int main()
+  {
+    int descriptor = 1;
+    // 建立一个连接，con 分配在栈内存上
+    Connection con = connect(&descriptor);
+    // 将连接绑定到共享指针上，虽然此处 con 不在共享内存上，指定了自定义的
+    // disconnect 函数保证在 p 的生命同期结束时能够自动 disconnect
+    std::shared_ptr<Connection> p(&con, disconnect);
+  }
+#+end_src
+
+#+RESULTS[520b3f5b1c41550d49240a1c12fd4e533c0cad12]:
+: Connected to descriptor 1.
+: Disconnected from descriptor 1.
+
+=shared_ptr= 和 =weak_ptr= 的常量性
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <memory>
+
+  int main() {
+    // 声明指针常量
+    std::shared_ptr<int> const ip = std::make_shared<int>(1);
+    ,*ip = 2;                  // 可以改变指针指向的值
+    // ip.reset(new int(3));  // 无法改变指针本身
+    std::cout << *ip << std::endl;
+
+    // 声明指向常量的指针
+    std::shared_ptr<const int> cip = std::make_shared<const int>(1);
+    // *cip = 2;             // 无法改变指针指向的值
+    cip.reset(new int(3));   // 可以将指针指向新值
+    std::cout << *cip << std::endl;
+  }
+#+end_src
+
+#+RESULTS[fc27cb78024f7296427ef9ee7ed4abadd93cc802]:
+: 2
+: 3
+
+** =allocator=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <memory>
+  #include <vector>
+  #include <algorithm>
+  #include <iterator>
+
+  int main() {
+    std::vector<int> ivec{1, 2, 3, 4, 5};
+    std::allocator<int> alloc;
+    // 分配 10 个 int 元素的内存
+    auto p = alloc.allocate(ivec.size() * 2);
+    // 拷贝 ivec 中的元素来构造从 p 开始的元素
+    auto q = std::uninitialized_copy(ivec.begin(), ivec.end(), p);
+    // 将剩余的元素初始化为 24
+    std::uninitialized_fill_n(q, ivec.size(), 24);
+    // 打印输出
+    std::copy(p, p + ivec.size() * 2, std::ostream_iterator<int>(std::cout, ", "));
+  }
+#+end_src
+
+#+RESULTS[6501b7f0221ba3932ae81c8d9c18fd838a07b482]:
+: 1, 2, 3, 4, 5, 24, 24, 24, 24, 24,
+
+** 单例模式
+
+#+begin_src C++ :file-name foo.cc :flags -lpthread
+  #include <iostream>
+  #include <thread>
+
+  // 通过局部静态变量的特性保证了线程安全；
+  // 不需要使用共享指针，代码简洁；
+  // 注意在使用的时候需要声明单例的引用 Single& 才能获取对象。
+  class Singleton {
+  public:
+    ~Singleton() {
+      std::cout << "Destructor called!" << std::endl;
+    }
+    Singleton(Singleton const&) = delete;
+    Singleton& operator=(Singleton const&) = delete;
+    static Singleton& get_instance() {
+      // If control enters the declaration concurrently while the variable is
+      // being initialized, the concurrent execution shall wait for completion of
+      // the initialization.
+      std::cout << "Get instance.\n" << std::flush;
+      static Singleton __instance;
+      return __instance;
+    }
+  private:
+    Singleton() {
+      std::cout << "Constructor called!" << std::endl;
+    }
+  };
+
+  int main() {
+    std::thread t1(&Singleton::get_instance);
+    std::thread t2(&Singleton::get_instance);
+    std::thread t3(&Singleton::get_instance);
+    t1.join();
+    t2.join();
+    t3.join();
+  }
+#+end_src
+
+#+RESULTS[67c2d625c8ffe7ccf98092b53e1b36bd9fd0558d]:
+: Get instance.
+: Constructor called!
+: Get instance.
+: Get instance.
+: Destructor called!
+** 容器的常量性
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <string>
+
+  int main() {
+    std::vector<std::string> const svec{"hello"};
+    // *svec.back() = std::string("world");
+  }
+#+end_src
+
+#+RESULTS[769f8b01c6d23cd622268d16c6b20f0a528e969f]:
+** 设计一个文本单词查询程序
+
+#+begin_src C++ :file-name foo.cc :flags -lfmt -std=c++2a
+  #include <iostream>
+  #include <memory>
+  #include <iterator>
+  #include <fstream>
+  #include <sstream>
+  #include <vector>
+  #include <string>
+  #include <map>
+  #include <set>
+  #include <fmt/core.h>
+
+  // 定义一个概念，类型 T 能够隐式转换为 std::size_t 类型（C++20 required）
+  template<typename T>
+  concept can_convert_to_size = std::is_convertible<T, std::size_t>::value;
+
+  // 根据 size 的值返回单数或复数形式
+  template<can_convert_to_size T>
+  std::string const& make_plural(T size, std::string const& __one, std::string const& __more)
+  {
+    return (size > 1? __more : __one);
+  }
+
+  // 查询结果类
+  class QueryResult;
+
+  // 查询器类
+  class TextQuery {
+  public:
+    using line_no = std::vector<std::string>::size_type;  // 行号数据类型
+    TextQuery(std::ifstream&);
+    QueryResult query(std::string const&) const;
+  private:
+    std::shared_ptr<std::vector<std::string>> text;      // 保存读取的文本
+    // 保存单词行号的集合的哈希表
+    std::map<std::string, std::shared_ptr<std::set<line_no>>> word_map;
+  };
+
+  // 查询结果类
+  class QueryResult {
+    friend std::ostream& operator<<(std::ostream& os, QueryResult const& rhs);
+  public:
+    QueryResult(std::string __sought,
+                std::shared_ptr<std::set<TextQuery::line_no>> __lines,
+                std::shared_ptr<std::vector<std::string>> __text) :
+      sought(__sought), lines(__lines), text(__text) { }
+  private:
+    std::string sought;                                  // 查询的单词
+    std::shared_ptr<std::set<TextQuery::line_no>> lines; // 出现的行号集合的指针
+    std::shared_ptr<std::vector<std::string>> text;      // 输入文本的指针
+  };
+
+  TextQuery::TextQuery(std::ifstream& ifs) : text(new std::vector<std::string>)
+  {
+    std::string buf, word;             // 行缓冲，单词缓冲
+    line_no number;                    // 行号
+
+    while (std::getline(ifs, buf)) {
+      text->push_back(buf);            // 保存当前行到 text
+      number = text->size() - 1;       // 当前行号
+
+      std::istringstream line(buf);    // 从当前行生成字符串流
+      while (line >> word) {
+        auto& lines = word_map[word];  // 指向 word 对应 set 的共享指针
+        if (!lines) {                  // 指针为空则分配一个新的 set
+          lines.reset(new std::set<line_no>);
+        }
+        lines->insert(number);
+      }
+    }
+  }
+
+  QueryResult TextQuery::query(std::string const& sought) const
+  {
+    // 如果没有找到 sought, 返回一个空 set 的指针
+    static std::shared_ptr<std::set<TextQuery::line_no>>
+      null(new std::set<TextQuery::line_no>);
+    // 使用 find 查找单词，防止将单词加入到 map 中
+    auto locate = word_map.find(sought);
+    if (locate == word_map.end())
+      return QueryResult(sought, null, text);  // 如果没找到 sought 返回空 set 指针
+    else
+      return QueryResult(sought, locate->second, text);
+  }
+
+  std::ostream& operator<<(std::ostream& os, QueryResult const& rhs)
+  {
+    os << fmt::format("[{0}] occurs in {1} {2}.", rhs.sought, rhs.lines->size(),
+                      make_plural(rhs.lines->size(), "line", "lines")) << std::endl;
+    for (auto num : *rhs.lines) {
+      os << fmt::format("\t(line {0}) {1}", num + 1, *(rhs.text->begin() + num))
+         << std::endl;
+    }
+    return os;
+  }
+
+  // 运行查询操作
+  // TextQuery&: 传入一个查询器的引用
+  // std::istream_iterator<std::string>: 传入一个输入流迭代器，好处是可以兼容从标
+  // 准输入或从文件流或字符串流输入
+  void runQueries(TextQuery& __text_query, std::istream_iterator<std::string> __is_iter)
+  {
+    std::string word;
+    while (true) {
+      std::cout << "Please input the word you want to query: " << std::flush;
+      std::cout << std::endl;
+      word = *__is_iter++;
+
+      // 读到 q 的时候退出
+      if (word == "q") {
+        std::cout << "Quit!" << std::endl;
+        break;
+      }
+
+      std::cout << __text_query.query(word);
+    }
+  }
+
+  int main()
+  {
+    std::ifstream ifs;
+    ifs.open("/home/cycoe/input.txt");
+    TextQuery tq(ifs);
+
+    // 用字符串流模拟标准输入
+    std::string command("it a q");
+    std::istringstream iss(command);
+    runQueries(tq, std::istream_iterator<std::string>(iss));
+  }
+#+end_src
+
+#+RESULTS[f6567e253a41c40b0d83ceb9dd6067022f5b3619]:
+#+begin_example
+Please input the word you want to query: 
+[it] occurs in 4 lines.
+	(line 4) even far inland, it must be said that professional seamen were especially
+	(line 17) vitality with which it seemed to be gifted. If it was a cetacean, it exceeded in
+	(line 25) exaggerated views that saw it as a mile wide and three long--you could still
+	(line 27) then known to ichthyologists, if it existed at all.
+Please input the word you want to query: 
+[a] occurs in 7 lines.
+	(line 1) THE YEAR 1866 was marked by a bizarre development, an unexplained and downright
+	(line 10) In essence, over a period of time several ships had encountered "an enormous
+	(line 11) thing" at sea, a long spindle-shaped object, sometimes giving off a
+	(line 17) vitality with which it seemed to be gifted. If it was a cetacean, it exceeded in
+	(line 20) accepted the existence of such a monster sight unseen-- specifically, unseen by
+	(line 24) timid estimates that gave the object a length of 200 feet, and ignoring those
+	(line 25) exaggerated views that saw it as a mile wide and three long--you could still
+Please input the word you want to query: 
+Quit!
+#+end_example
+** 树的遍历
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <memory>
+  #include <iterator>
+  #include <algorithm>
+
+  // 二叉树节点类
+  template<typename T>
+  struct Node {
+    // 叶子节点的构造方法
+    Node(T __value, Node* __left = nullptr, Node* __right = nullptr) :
+      value(__value), left(__left), right(__right) { }
+    // 拷贝节点（浅拷贝）
+    Node(Node* rhs) :
+      value(rhs->value), left(rhs->left), right(rhs->right) {
+      // 将 rhs 的左右子树置为 nullptr，防止 rhs 析构时将子树析构
+      // 神奇的是使用引用的话会提示引用的对象是一个右值
+      rhs->left = nullptr;
+      rhs->right = nullptr;
+    }
+    // 递归构造
+    Node(T __value, Node __left, Node __right) : value(__value) {
+      // 使用动态内存替换栈内存
+      left = new Node(&__left);
+      right = new Node(&__right);
+    }
+    ~Node() {
+      std::cout << "Delete Node(" << value << ")." << std::endl;
+      delete left;
+      delete right;
+    }
+    T value;
+    Node* left = nullptr;
+    Node* right = nullptr;
+  };
+
+  template<typename T, typename Iter>
+  void preorder_traverse(Node<T>* tree, Iter iter)
+  {
+    if (!tree)
+      return;
+    ,*iter++ = tree->value;
+    preorder_traverse(tree->left, iter);
+    preorder_traverse(tree->right, iter);
+  }
+
+  template<typename T, typename Iter>
+  void midorder_traverse(Node<T>* tree, Iter iter)
+  {
+    if (!tree)
+      return;
+    midorder_traverse(tree->left, iter);
+    ,*iter++ = tree->value;
+    midorder_traverse(tree->right, iter);
+  }
+
+  template<typename T, typename Iter>
+  void postorder_traverse(Node<T>* tree, Iter iter)
+  {
+    if (!tree)
+      return;
+    postorder_traverse(tree->left, iter);
+    ,*iter++ = tree->value;
+    postorder_traverse(tree->right, iter);
+  }
+
+  int main(int argc, char* argv[])
+  {
+    Node<int>* itree = new Node<int>({0, {1, {2}, {3}}, {4, {5}, {6}}});
+
+    std::cout << "Preorder traverse: ";
+    preorder_traverse(itree, std::ostream_iterator<int>(std::cout, ", "));
+    std::cout << std::endl;
+
+    std::cout << "Midorder traverse: ";
+    midorder_traverse(itree, std::ostream_iterator<int>(std::cout, ", "));
+    std::cout << std::endl;
+
+    std::cout << "Postorder traverse: ";
+    postorder_traverse(itree, std::ostream_iterator<int>(std::cout, ", "));
+    std::cout << std::endl;
+
+    delete itree;
+
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[f04762f2c8393501f425382f3e51609822054c23]:
+#+begin_example
+Delete Node(4).
+Delete Node(6).
+Delete Node(5).
+Delete Node(1).
+Delete Node(3).
+Delete Node(2).
+Preorder traverse: 0, 1, 2, 3, 4, 5, 6, 
+Midorder traverse: 2, 1, 3, 0, 5, 4, 6, 
+Postorder traverse: 2, 1, 3, 0, 5, 4, 6, 
+Delete Node(0).
+Delete Node(1).
+Delete Node(2).
+Delete Node(3).
+Delete Node(4).
+Delete Node(5).
+Delete Node(6).
+#+end_example
+** =std::pair= 与 =std::tuple=
+
+=std::pair= 与 =std::tuple= 是 =C++= 中的通用工具类型， =std::pair= 表示会同时出现的变量
+对，常用在 =map= 中。 =std::tuple= 表示异质元素列，可视为 =std::pair= 的扩展长度类型，
+在 =C++98= 中通过对不同元素长度的 tuple 进行逐个定义实现， =C++11= 引入变长参数模板
+后就可通过更加简单的方式定义。
+
+*** =std::pair=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <utility>
+  #include <tuple>
+
+  int main()
+  {
+    // 有两种方式构造一个 pair
+    // 1. 使用 make_pair 方式进行构造
+    auto p1 = std::make_pair(24, "Hello, world!");
+    // 2. 使用 pair 的构造函数
+    std::pair<int, std::string> p2(24, "Hello, C++!");
+
+    std::string s1, s2;
+    // 有三种方式获取 pair 中的元素
+    // 1. 使用 first 或 second
+    s1 = p1.second;
+    // 2. 使用 tuple 的 get 元素方法，从 p1 中取 1 号元素，注意 tuple 不是寻常的容
+    // 器因此不允许迭代，也因此 get 是个编译期操作。
+    s1 = std::get<1>(p1);
+    // 3. 使用 tie 方法构造一个接收器，并用 p2 给其赋值
+    // 等价于 std::make_pair<std::ref(i2), std::ref(s2)> = p2;
+    std::tie(std::ignore, s2) = p2;
+    std::cout << "s1 is " << s1 << std::endl;
+    std::cout << "s2 is " << s2 << std::endl;
+  }
+#+end_src
+
+#+RESULTS[921df90b80a017a1900a2c66b067e75b91e281e4]:
+: s1 is Hello, world!
+: s2 is Hello, C++!
+
+=std::get= 是 =<tuple>= 头文件定义的一个方法，用于从 tuple 中获取元素。 =get= 方法是一
+个编译期的方法，tuple 也无法像普通容器一样进行迭代，因为 =C++= 是强类型静态语言，
+而 tuple 又是一个异质列表，编译期必须在编译期确定要取出的元素类型
+
+*** =std::tuple=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <utility>
+  #include <tuple>
+
+  int main()
+  {
+    // tuple 的构造与 pair 类似
+    auto t1 = std::make_tuple(24, "Hello, world!");
+    std::tuple<int, std::string> t2(24, "Hello, C++!");
+
+    // tuple 在比较时使用字典序依次对元素进行比较，但注意与 pair 不同的是 tuple 会
+    // 进行类型转换，p1 会由std::tuple<int, char const*> 类型转换为 std::tuple<int,
+    // std::string>
+    if (t1 < t2)
+      std::cout << "t1 is smaller than t2." << std::endl;
+    else
+      std::cout << "t2 is smaller than t1." << std::endl;
+  }
+#+end_src
+
+#+RESULTS[31cf81447e8cbfe5824afbdedee77f17dc689750]:
+: t2 is smaller than t1.
+
+=tuple= 包含一些辅助函数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <tuple>
+  #include <utility>
+  #include <typeinfo>
+
+  int main()
+  {
+    int n{};
+
+    auto tt = std::tuple_cat(std::make_tuple(42, 3,14, "Hello"),
+                             std::make_pair(24, "world"),
+                             std::tie(n));
+    std::cout << "tt has " << std::tuple_size<decltype(tt)>::value << " elements." << std::endl;
+    std::cout << "Type of n is " << typeid(std::tuple_element<5, decltype(tt)>::type).name() << std::endl;
+  }
+#+end_src
+
+#+RESULTS[1a67a19ebad1e47b9493d63129b1b3f0778f8dec]:
+: tt has 7 elements.
+: Type of n is PKc
+
+利用模板元编程实现打印任意长度元组
+
+#+begin_src C++ :file-name foo.cc
+  #include <tuple>
+  #include <iostream>
+
+  // 打印 tuple 中 IDX 号元素的助手类模板（递归方法）
+  template<int IDX, int MAX, typename... Args>
+  struct PRINT_TUPLE
+  {
+    static void print(std::ostream& os, const std::tuple<Args...>& t)
+    {
+      os << std::get<IDX>(t) << (IDX + 1 == MAX ? "" : ", ");
+      PRINT_TUPLE<IDX + 1, MAX, Args...>::print(os, t);
+    }
+  };
+
+  // PRINT_TUPLE 的偏特化模板（递归出口）
+  template<int MAX, typename... Args>
+  struct PRINT_TUPLE<MAX, MAX, Args...>
+  {
+    static void print(std::ostream& os, const std::tuple<Args...>& t) { }
+  };
+
+  // 重载 << 运算符
+  template<typename... Args>
+  std::ostream& operator<<(std::ostream& os, const std::tuple<Args...> t)
+  {
+    os << "[";
+    PRINT_TUPLE<0, sizeof...(Args), Args...>::print(os, t);
+    return os << "]";
+  }
+
+  int main()
+  {
+    auto t = std::make_tuple(77, 3.14, "Hello, world!");
+    std::cout << t << std::endl;
+  }
+#+end_src
+
+#+RESULTS[e3151fd1d0c995b1577fdcce69797d5ac184fb87]:
+: [77, 3.14, Hello, world!]

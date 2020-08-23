@@ -1,0 +1,55 @@
+#+TITLE: Org mode 中的代码块
+#+DATE: <2020-05-28 Thu 10:45>
+#+LAYOUT: post
+#+TAGS: Emacs, Org mode, Babel
+#+CATEGORIES: Emacs, Orgs mode
+
+Org mode 是 Emacs 中的一个大杀器，也是我从 Vim 转向 Emacs 的最重要的原因。与
+Markdown 相比， Org mode 有一个非常强大的功能叫作 Babel ，不仅能直接在 Org 文件
+中直接运行各种代码块，还能打通各个代码块之间的数据交换，甚至借用绘图库直接对数据
+进行可视化，比 Python Jupyter Book 还好用得多。
+
+#+CAPTION: Org mode
+[[file:./Org-mode-中的代码块/orgmode.png]]
+
+#+HTML: <!-- more -->
+
+** 插入代码块
+在 Org mode 中插入代码块非常简单，只需要用如下的环境将代码包裹起来
+#+begin_src org
+  ,#+begin_src python
+     print("Hello, world!")
+  ,#+end_src
+#+end_src
+
+=#+begin_src= 后面指定代码块中的语言
+
+** 设置 Headers 参数
+Org mode 中有三个级别的 Headers 参数，分别为全局、文件级、代码块级，三个级别的作
+用范围越来越小但优先级越来越高
+*** 全局 Headers
+在配置文件中设置参数
+#+begin_src emacs-lisp :results none
+  (add-to-list 'org-babel-default-header-args:gnuplot
+        '((:results . "file")
+          (:exports . "both")
+          (:cache . "yes"))
+        'org-babel-default-header-args:C++
+        '((:results . "output")
+          (:exports . "both")
+          (:cache . "yes")))
+#+end_src
+*** 文件级 Headers
+在文件的任意位置加入
+#+begin_src org
+  #+PROPERTY: header-args :exports both
+#+end_src
+*需注意：* 若将该参数加到文件最开始的位置，则对全头生效；若加到某个标题下，则只对
+该标题以及其子标题生效。
+*** 代码块级 Headers
+直接修改单个代码块的 Headers 参数
+#+begin_src org
+  ,#+begin_src python :exports both
+     print("Hello, world!")
+  ,#+end_src
+#+end_src

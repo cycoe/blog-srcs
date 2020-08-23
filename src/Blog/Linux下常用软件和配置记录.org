@@ -1,0 +1,340 @@
+#+TITLE: Linux 下常用軟件和配置記錄
+#+DATE: <2018-11-09 Fri 22:22>
+#+LAYOUT: post
+#+TAGS: Linux
+#+CATEGORIES: Linux
+
+隨着使用 Linux
+系統的年頭越來越長，積累的相關技巧也越來越多。最近一次重裝系統突然發現很多配置都已經忘的差不多了，想要配置系統還需要去網上到處搜刮資料實在是麻煩，因此打算用一篇博客記錄關於
+Linux 系統的配置及常用軟件的介紹。
+
+#+HTML: <!-- more -->
+
+** 硬件相关配置
+   :PROPERTIES:
+   :CUSTOM_ID: 硬件相关配置
+   :END:
+
+一般来说，在 Windows 上驱动是随硬件的发布同步释出的，而 Linux 上需要硬件先发布，
+开源驱动才能跟上。Linux 内核能较好地适配所有不太新的硬件，太新的硬件就自求多福了。
+目前遇到最有可能出问题的硬件有无线网卡、触摸板、显卡等。因此，这些驱动需要单独配
+置。
+
+*** APU 核显
+    :PROPERTIES:
+    :CUSTOM_ID: apu-核显
+    :END:
+
+就目前形式来看，牙膏厂的 CPU + iGPU 是问题概率最小的组合，虽然 10 代以前 Intel
+核显的性能鸡肋得不行，但胜在稳定。APU 次之，本来我以为 APU 是与 Intel 同等稳定的
+存在，但 =xf86-video-amdgpu= 驱动竟然遇到了问题... Intel CPU + NVIDIA GPU 的组合在
+早些年是绝对不推荐的，但是最近 bumblebee 和 prime 等项目趋于成熟，NVIDIA 显卡的
+使用体验好了不少，但还是比不上 Intel和 AMD 的核显。我的 CPU 和 显卡型号如下：
+
+#+BEGIN_EXAMPLE
+  CPU:       Topology: Quad Core model: AMD Ryzen 5 3550H with Radeon Vega Mobile Gfx
+             bits: 64 type: MT MCP arch: Zen+ rev: 1 L2 cache: 2048 KiB
+             flags: avx avx2 lm nx pae sse sse2 sse3 sse4_1 sse4_2 sse4a ssse3 svm
+             bogomips: 33550
+             Speed: 2203 MHz min/max: 1400/2100 MHz boost: enabled Core speeds (MHz):
+             1: 2011 2: 1879 3: 1198 4: 1199 5: 1202 6: 1206 7: 1199 8: 1199
+  Graphics:  Device-1: AMD Picasso vendor: Lenovo driver: amdgpu v: kernel bus ID: 03:00.0
+             chip ID: 1002:15d8
+             Display: x11 server: X.Org 1.20.5 driver: amdgpu resolution: 2560x1600~60Hz
+             OpenGL: renderer: AMD RAVEN (DRM 3.33.0 5.3.12-arch1-1 LLVM 9.0.0)
+             v: 4.5 Mesa 19.2.4 direct render: Yes
+#+END_EXAMPLE
+
+此处只有一点需要注意，不要安装官方源的 =xf86-video-amdgpu= ，会导致机器异常耗电并
+且无法挂起大量发热。安装 AUR上的 Git 版本可暂时解决问题。
+
+#+BEGIN_SRC sh
+  yay -S xf86-video-amdgpu-git
+#+END_SRC
+
+在 =/etc/X11/xorg.conf.d/20-amdgpu.conf= 配置中加入如下 section 启用 TearFree
+
+#+BEGIN_EXAMPLE
+  Section "Device"
+      Identifier "AMD"
+      Driver "amdgpu"
+      Option "TearFree" "true"
+  EndSection
+#+END_EXAMPLE
+
+*** 亮度配置
+    :PROPERTIES:
+    :CUSTOM_ID: 亮度配置
+    :END:
+
+Intel 核显与 AMD 核显调节亮度的方法不太相同，具体步骤参考我的另一篇博客
+[[file:Archlinux-无法通过亮度调节按键调节亮度的解决办法.org][Archlinux 无法通过
+亮度调节按键调节亮度的解决办法]]。
+
+** Archlinux 配置
+   :PROPERTIES:
+   :CUSTOM_ID: archlinux-配置
+   :END:
+
+*** 讓 Qt5 程序使用原生 GTK+ 主題
+    :PROPERTIES:
+    :CUSTOM_ID: 讓-qt5-程序使用原生-gtk-主題
+    :END:
+
+Qt5 程序在 GTK3 環境下主題不統一真的很難受，尤其是 GTK3 用了黑色主題而 Qt5 還是
+刺眼的白色主題的時候。不像在 KDE 設置中設置 GTK3 主題那麼方便，設置 Qt5 主題可需
+要好好折騰一番。而且這個解決方案也是我使用了近一年後才找到的答案。
+
+首先你需要安裝 qt5ct 來提供 Qt5 程序主題的設置入口。此時直接在應用列表中打開
+qt5ct 會提示未設置環境變量，編輯 =.xprofile= 文件，並在其中加入如下內容
+
+#+BEGIN_SRC sh
+  [ "$XDG_CURRENT_DESKTOP" = "KDE" ] || [ "$XDG_CURRENT_DESKTOP" = "GNOME" ] || export QT_QPA_PLATFORMTHEME="qt5ct"
+#+END_SRC
+
+註銷後重新登錄，此時打開 qt5ct 應該就不報錯了。但此時你會發現主題列表中只有 Qt5
+自帶的幾個樣式 +，而沒有 Gtk3 主題。你需要安裝 =qt5-styleplugins= 來使 Qt5 支持
+GTK2 主題。你沒有看錯，我也不知道爲啥 Qt5 只支持 GTK2的主題。但是我們要如何設置
+GTK2 主題呢，好吧，又需要安裝一個叫 =gtk-theme-switch2= 的工具。在
+=gtk-theme-switch2= 中設置好滿意的 GTK2 主題後，再在 qt5ct 中設置 Qt5 主題爲
+GTK2 即可。+
+
+**** 2019-08-11 更新
+     :PROPERTIES:
+     :CUSTOM_ID: 更新
+     :END:
+
+事实上現在有个更加好用的 qt 主题引擎叫 Kvantum，样式更加現代并且支持透明。 =sudo
+pacman -S kvantum-qt5= 安装完成后，在 qt5ct 中将 Kvantum 设置为默认主题引擎，并
+在 Kvantum 中設置主题即可。
+
+*** variety 无法设置壁紙
+    :PROPERTIES:
+    :CUSTOM_ID: variety-无法设置壁紙
+    :END:
+
+目前我遇到过两种情况可能导致 variety 无法设置壁紙。
+1. 未安装 feh，虽然variety 的依赖项中并没有 feh，但是缺少 feh 确实无法设置壁紙。
+2. 如果没有安装 display manager，variety 无法获取当前桌面的环境变量，在
+   =.xinitrc= 中添加
+
+#+BEGIN_SRC sh
+  # variables set identifying which DE / WM you're using,
+  # so variety can know what to do.
+  export XDG_CURRENT_DESKTOP=i3-gaps
+#+END_SRC
+
+*** dunst 无法显示通知
+    :PROPERTIES:
+    :CUSTOM_ID: dunst-无法显示通知
+    :END:
+
+同样是由于没有 display manager 导致的，在 =.xinitrc= 中添加
+
+#+BEGIN_SRC sh
+  # When using dunst without a Display Manager,
+  # the DISPLAY environment variable might not be correctly set.
+  systemctl --user import-environment DISPLAY
+#+END_SRC
+
+*** 小鹤双拼
+    :PROPERTIES:
+    :CUSTOM_ID: 小鹤双拼
+    :END:
+
+每次重装系统都需要重新配置输入法，更蛋疼的是在 Rime 中添加鹤形码表时，总出现部署
+错误。虽然最后折腾半天总是莫名其妙地整好了，但是不得不感叹配置 Rime 真是玄学（虽
+然很不想承认是自己对 Rime 的配置文件一窍不通:laughing:）。特此记录一下给 Rime 添
+加鹤形的过程，虽然以后按相同的步骤也不一定能配置成功。
+
+第一步，安装 fcitx 框架（ibus 框架就不考虑了，fcitx 用习惯了）和 Rime 的 fcitx
+实现。
+
+#+BEGIN_SRC sh
+  # Archlinux
+  sudo pacman -S fcitx fcitx-rime fcitx-configtool
+  # openSUSE
+  sudo zypper in fcitx fcitx-rime fcitx-config-gtk
+#+END_SRC
+
+第二步，在 fcitx 设置中加入 rime 输入法，记得关闭 =只显示当前语言输入法选项= 。
+切换到 Rime 输入法，此时应该会自动运行一次 deploy。
+
+第三步，将[[https://git.coding.net/cycoe/config.git][我的配置]]中的
+=.config/fcitx= 目录复制到对应的路径，其中已经包含了 flypy 使用的码表（之前小鹤
+双拼官网发布的挂接码表文件，但因为没有通用的配置方法目前已经下架），并将运行下面
+的命令将配置文件复制到 Rime 系统级路径中（尝试过复制到
+=.config/fcitx/rime/build/default.custom.yaml= ，没有效果）。
+
+#+BEGIN_SRC sh
+  # 备份原配置
+  sudo mv /usr/share/rime-data/default.yaml /usr/share/rime-data/default.yaml.bak
+  # 复制新配置
+  sudo cp default.yaml /usr/share/rime-data/default.yaml
+#+END_SRC
+
+第四步，在 fcitx 上右键，选择 deploy，此时会提示部署错误，但是惊喜地发现输入法已
+经可以使用。
+
+** 常用软件
+   :PROPERTIES:
+   :CUSTOM_ID: 常用软件
+   :END:
+
+用了几年 Linux 后发现其实 Linux 平台的软件并不少（当然 Adobe 全家桶和 MS Office
+除外，要做设计或者办公还是老老实实 Windows 吧:speak_no_evil:），只是与 Windows
+和 Mac 平台常用的软件不同而已。Linux 的真正强大之处是命令行软件，几条简单的命令
+组合就可以完成复杂的功能。
+
+*** Dia
+    :PROPERTIES:
+    :CUSTOM_ID: dia
+    :END:
+
+一個非常小的流程圖繪製軟件，但是功能夠用。
+
+*** ncdu
+    :PROPERTIES:
+    :CUSTOM_ID: ncdu
+    :END:
+
+ncdu (NCurses Disk Usage) 是一個基於 NCurses 系統的磁盤用量分析命令行軟件，相似
+功能的還有基於 GTK+ 的 Baobab（從版本號來看應該是屬於 Gnome 桌面套裝）。其實對我
+來說真的很少使用此類軟件，畢竟我很少刪除磁盤文件，但是最近 =/home= 分區接近爆滿
+讓我很難受，還是需要從磁盤的角落翻出以後再也用不上的大文件以刪除之。
+
+*** xreader
+    :PROPERTIES:
+    :CUSTOM_ID: xreader
+    :END:
+
+pdf 文檔閱讀器，X-Apps 計劃中的一員（這個計劃好像只有個閱讀器？:laughing:）。體
+積小巧，優點是可以使用 =hjkl= 等 vim 鍵位進行控制。缺點是沒有高級功能，單純作爲
+一個閱讀器還是不錯的。
+
+*** pcmanfm
+    :PROPERTIES:
+    :CUSTOM_ID: pcmanfm
+    :END:
+
+LXDE 桌面環境默認文件管理器，實話說比 Gnome 的鸚鵡螺好用太多，功能上與 Dolphin
+相近。Archlinux 上有單獨提供 pcmanfm-gtk3 的安裝包，其他髮型版上應該默認使用的就
+是 GTK3 了。
+
+*** lxappearance
+    :PROPERTIES:
+    :CUSTOM_ID: lxappearance
+    :END:
+
+GTK+ 界面主題設置工具，又是 LXDE 的一員。LXDE 自帶的幾款軟件質量都挺高，界面風格
+統一併且功能強大。
+
+*** gpickview
+    :PROPERTIES:
+    :CUSTOM_ID: gpickview
+    :END:
+
+LXDE 默認的圖片查看器，體積小巧，沒有太多花哨功能。
+
+*** sxiv
+    :PROPERTIES:
+    :CUSTOM_ID: sxiv
+    :END:
+
+Simple X11 Image Viewer
+
+*** zathura
+    :PROPERTIES:
+    :CUSTOM_ID: zathura
+    :END:
+
+Suckless pdf 阅读器
+
+*** ranger
+    :PROPERTIES:
+    :CUSTOM_ID: ranger
+    :END:
+
+python 写成的基于命令行的文件管理器，有与 Vim 类似的键位绑定，全键盘操作效率爆表。
+拥有 ranger 就不太需要 pcmanfm 了。
+
+**** 初次使用 通过运行
+=ranger --copy-config=all= 拷贝所有配置文件到用户家目录。包含以下文件
+
+#+BEGIN_SRC sh
+  commands_full.py # ranger 所有命令
+  commands.py # 自定义命令
+  rc.conf # ranger 配置文件
+  rifle.conf # 文件打开方式配置
+  scope.sh # 预览配置
+#+END_SRC
+
+**** 文件预览
+     :PROPERTIES:
+     :CUSTOM_ID: 文件预览
+     :END:
+
+在 =rc.conf= 中檢查所有 =preview= 的选项
+
+#+BEGIN_EXAMPLE
+  ...
+  # Use non-default path for file preview script?
+  # ranger ships with scope.sh, a script that calls external programs (see
+  # README.md for dependencies) to preview images, archives, etc.
+  set preview_script ~/.config/ranger/scope.sh
+
+  # Use the external preview script or display simple plain text or image previews?
+  set use_preview_script true
+  ...
+  # 设置图片的 method，虽然 w3m bug 很多，但也是唯一一个选择了
+  set preview_images_method w3m
+  ...
+#+END_EXAMPLE
+
+预览其他类型的文件需要安装对应的依赖
+
+#+BEGIN_EXAMPLE
+  Optional Deps   : atool: for previews of archives
+                    elinks: for previews of html pages
+                    ffmpegthumbnailer: for video previews
+                    highlight: for syntax highlighting of code
+                    libcaca: for ASCII-art image previews
+                    lynx: for previews of html pages
+                    mediainfo: for viewing information about media files
+                    odt2txt: for OpenDocument texts
+                    perl-image-exiftool: for viewing information about media files
+                    poppler: for pdf previews
+                    python-chardet: in case of encoding detection problems
+                    sudo: to use the "run as root"-feature
+                    transmission-cli: for viewing bittorrent information
+                    w3m: for previews of images and html pages
+#+END_EXAMPLE
+
+但不建议开启压缩包的预览，会大幅影响速度，修改 =scope.sh= 文件，注释掉压缩包的预
+览
+
+#+BEGIN_EXAMPLE
+          # Archive
+          a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|lha|lz|lzh|lzma|lzo|\
+          rpm|rz|t7z|tar|tbz|tbz2|tgz|tlz|txz|tZ|tzo|war|xpi|xz|Z|zip)
+              # atool --list -- "${FILE_PATH}" && exit 5
+              # bsdtar --list --file "${FILE_PATH}" && exit 5
+              exit 1;;
+#+END_EXAMPLE
+
+**** 批量重命名
+     :PROPERTIES:
+     :CUSTOM_ID: 批量重命名
+     :END:
+
+ranger 有个非常 sexy 的功能，那就是批量重命名。选中多个文件后，输入
+=:bulkrename= ，ranger 会帮你自动打开一个 Vim 编辑器。在 Vim 中你可以利用 Vim 的
+强大功能对文件名做任何处理，修改完成后保存退出即可。
+
+#+BEGIN_SRC sh
+  # This file will be executed when you close the editor.
+  # Please double-check everything, clear the file to abort.
+  mv -vi -- test today_test
+  mv -vi -- test.md today_test.md
+  mv -vi -- test.pdf today_test.pdf
+#+END_SRC

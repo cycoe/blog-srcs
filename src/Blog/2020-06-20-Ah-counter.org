@@ -1,0 +1,66 @@
+#+TITLE: 2020-06-20 Ah counter
+#+DATE: <2020-06-20 Sat 21:45>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+#+HTML: <!-- more -->
+
+** DONE <2020-06-20 Sat> Ah Counter
+CLOSED: [2020-06-20 Sat 21:44]
+*** DONE Records
+CLOSED: [2020-06-20 Sat 21:44]
+#+TBLNAME: Ah-counting-3
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+| Name    | modal particles | And | Well | But | Repeats | Other | Total |
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+| Linda   |              12 |   0 |    0 |   0 |       0 |     0 |    12 |
+| Grace   |               2 |   0 |    0 |   0 |       0 |     0 |     2 |
+| Tina    |               2 |   0 |    0 |   0 |       4 |     0 |     6 |
+| Amy     |               5 |   2 |    0 |   0 |      13 |     0 |    20 |
+| Watson  |               2 |   0 |    0 |   0 |       2 |     0 |     4 |
+| Rob     |              18 |   0 |    0 |   0 |       0 |     0 |    18 |
+| Kobe    |               4 |   0 |    0 |   0 |       6 |     0 |    10 |
+| Lucy    |               2 |   0 |    0 |   0 |       0 |     0 |     2 |
+| Leon    |              13 |   1 |    0 |   0 |       0 |     0 |    14 |
+| Nate    |               2 |   8 |    0 |   0 |       0 |     0 |    10 |
+| Jocelyn |               3 |   0 |    0 |   0 |       1 |     0 |     4 |
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+#+TBLFM: $8=vsum($2..$7)
+
+#+begin_src gnuplot :file ./Regular Meeting Roles/2020-06-20-ah-counting.png :var data=Ah-counting-3
+  set term pngcairo size 1600, 1200 font ',32'
+  firstcol=2
+  cumulated(i)=((i>firstcol)?column(i)+cumulated(i-1):(i==firstcol)?column(i):1/0)
+
+  # Set the first line as headers
+  set key autotitle columnhead tmargin center box horizontal
+  set style fill solid 1 border lt -1
+  set style data histograms
+  set style histogram rowstacked
+  set xtics font '-Bold' rotate by -30 offset -2,0
+  set grid
+
+  # Set the first column as x axis ticks labels
+  plot for [i=2:7] data using (column(i)):xticlabels(1)
+#+end_src
+
+#+RESULTS[39741c6d76c56df3f347d11d50a253feac85c6f2]:
+[[file:./Regular Meeting Roles/2020-06-20-ah-counting.png]]
+
+*** DONE Report
+CLOSED: [2020-06-20 Sat 21:44]
+- We could see that all members had very good performance in this meeting, and
+  all of us made a big progress on the control of filler words.
+- Amy always chooses the very interesting topics, and I think Amy really had a
+  perfect performance in the first half of your speech. The usage of Uh, Um, Ur
+  in your speech reduced a lot. At the second half maybe you became a little
+  nervous, and you use some repeats. A little suggestion is that You could use
+  pause instead of repeats when you are thinking.
+- Rob, Leon and Linda are used to use some modal particles in their speech, and
+  so am I. I know when we are searching the words in our head, we say Um and Ur
+  subconsciously. I summarized three small suggestions for this situation. The
+  first one is also using pause instead of Uh and Um. Second one is determining
+  the purpose of the next sentence before you speak. The last on is stretching
+  the words, that means you could speak slower and remain more time to think
+  about the next sentence.

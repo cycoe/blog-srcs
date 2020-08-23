@@ -1,0 +1,94 @@
+#+TITLE: 2020-07-10 Table Topic Master
+#+DATE: <2020-07-10 Fri 14:42>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+#+HTML: <!-- more -->
+
+** DONE <2020-07-10 Fri> [4/4] Table topic master
+CLOSED: [2020-07-11 Sat 16:54]
+*** DONE Topic: Brave the Winds and Waves
+CLOSED: [2020-07-10 Fri 22:06]
+*** DONE [6/6] prepare 10 questions according to the topic
+CLOSED: [2020-07-10 Fri 22:28]
+:PROPERTIES:
+:Effort:   1h
+:END:
+:LOGBOOK:
+CLOCK: [2020-07-10 Fri 15:11]--[2020-07-10 Fri 15:21] =>  0:10
+:END:
+1. [X] As we know, the TV show /Older Sisters Who Brave the Winds and Waves/ is
+   really popular these days. So I prepared a special section that I will invite
+   3 challengers to take part in this show, and introduce your special skills to
+   battle with each other. each challenger has 2 minutes to show yourself. After
+   the battle, I will choose 1 referee to choose your favorite challenger and
+   tell us why?
+2. [X] When you are 60 years old, how can you become a square dancing king/queen?
+3. [X] If you attended this college entrance examination, and the title of essay
+   question is /brave the winds and waves/, how will you tell your story?
+4. [X] Use "I sailed a boat in the storm, while winds tearing and waves
+   beating..." as beginning and tell the following part of this story.
+5. [X] There is also a film named Brave the Winds and Waves, and the main
+   characters are car racer, programmer and businessman. If you are the one,
+   which character do you want to choose?
+6. [X] Go into battle with a light pack. What do you want to throw away if you
+   want to go faster?
+
+*** DONE Make a PPT
+CLOSED: [2020-07-10 Fri 22:28]
+:PROPERTIES:
+:Effort:   1h
+:END:
+
+*** DONE opening draft
+CLOSED: [2020-07-11 Sat 16:54]
+:PROPERTIES:
+:Effort:   1h
+:END:
+Good evening ladies and gentlemen, I am today's table topic master Cycoe. Today,
+our topic is Brave winds and waves. I think this will be an interesting topic
+because of the TV show /Elder sisters who brave winds and waves/. In table topic
+section, I will invite several volunteers to the stage, choose a question and
+deliver a speech in 90 seconds. But today, we also have a special sub-section
+involving 4 challengers. That means, in these 9 questions, 5 questions are the
+ordinary question, and the left 4 ones will trigger the special sub-section,
+more interesting and challenge. So, let's begin, have a good luck.
+
+#+TBLNAME: tbl-data
+| A5输液管20000 | A5输液管20000 |
+| B5担架1000    | B5担架2000    |
+| B5止血钳15000 | B5止血钳15000 |
+
+#+begin_src python :results output :var data=tbl-data
+  import re
+
+  def parse(__data):
+      pattern = re.compile(r"[A-Z]\d+(\D+)(\d+)", re.S)
+      items = {}
+
+      for item in __data:
+          match = re.match(pattern, item)
+          if match:
+              try:
+                  items[match.group(1)] = int(match.group(2))
+              except Exception as e:
+                  print("match result is: ", match)
+                  print(e)
+
+      return items
+
+  if __name__ == '__main__':
+      item_a = parse([row[0] for row in data])
+      item_b = parse([row[1] for row in data])
+      print("Items in set(A):", item_a)
+      print("Items in set(B):", item_b)
+      print("Items in set(A) is {}equal to items in set(B).".format(
+          "" if item_a == item_b else "not "
+      ))
+#+end_src
+
+#+RESULTS:
+: Items in set(A): {'输液管': 20000, '担架': 1000, '止血钳': 15000}
+: Items in set(B): {'输液管': 20000, '担架': 2000, '止血钳': 15000}
+: Items in set(A) is not equal to items in set(B).

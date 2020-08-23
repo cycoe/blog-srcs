@@ -1,0 +1,131 @@
+#+TITLE: 使用 matplotlib 进行科学绘图第一弹-matplotlib 初体验
+#+DATE: <2019-12-05 Thu 22:55>
+#+LAYOUT: post
+#+TAGS: Python, matplotlib, plot
+#+CATEGORIES: Python, matplotlib
+
+#+ATTR_EXPORT: :width 768px
+#+CAPTION: matplotlib
+[[https://matplotlib.org/_static/logo2_compressed.svg]]
+
+#+BEGIN_QUOTE
+  Matplotlib is a Python 2D plotting library which produces publication
+  quality figures in a variety of hardcopy formats and interactive
+  environments across platforms. Matplotlib can be used in Python
+  scripts, the Python and IPython shells, the Jupyter notebook, web
+  application servers, and four graphical user interface toolkits.
+#+END_QUOTE
+
+[[https://matplotlib.org][matplotlib]] 是 Python 中常用的一个绘图库，与百度开源
+的[[https://www.echartsjs.com/en/index.html][echarts]] 和基于 matplotlib 的
+[[http://seaborn.pydata.org/][seaborn]] 不同，matplotlib 是更底层的绘图库。这意
+味着 matplotlib 能够对绘图风格进行更精细的控制，也意味着它默认的风格比其他库更
+丑。。。
+
+#+HTML: <!-- more -->
+
+其实我做这个系列的原因是，在某一天我提交了我的论文给我们老板，结果我里面的图被嫌
+弃做的太丑。。。好吧，果然 matplotlib 默认的样式还是入不了老板的法眼。那么就需要
+对样式进行修改，不求好看，只求向 Origin 做的图靠拢。也就是说这个系列不会系统地对
+matplotlib 库进行介绍，而是针对使用 matplotlib 进行科学绘图过程中可能遇到的问题
+进行总结。
+
+** matplotlib 编程风格
+   :PROPERTIES:
+   :CUSTOM_ID: matplotlib-编程风格
+   :END:
+
+matplotlib 有两种明确的编程风格，一种是类似于 matlab 的命令式风格，如
+
+#+BEGIN_SRC python
+  from matplotlib import pyplot as plt
+  import numpy as np
+
+  x = np.linspace(0, 10, 100)
+  y = np.sin(x)
+  plt.plot(x, y)
+  plt.xlim(0, 10)
+  plt.legend()
+  plt.show()
+#+END_SRC
+
+一种是与 Python 原生风格更接近的面向对象编程风格
+
+#+BEGIN_SRC python
+  from matplotlib import pyplot as plt
+  import numpy as np
+
+  x = np.linspace(0, 10, 100)
+  y = np.sin(x)
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y)
+  ax.set_xlim(0, 10)
+  ax.legend()
+  plt.show()
+#+END_SRC
+
+** First Blood 第一张图
+   :PROPERTIES:
+   :CUSTOM_ID: first-blood-第一张图
+   :END:
+
+使用 matplotlib 绘图非常的简单，只需要三行代码。
+
+#+BEGIN_SRC python
+  # 从 matplotlib 中引入 pyplot
+  from matplotlib import pyplot as plt
+
+  # 绘制折线图
+  plt.plot([1, 2], [1, 2])
+  # 显示图像
+  plt.show()
+#+END_SRC
+
+#+CAPTION: 第一张图
+[[file:使用matplotlib进行科学绘图第一弹-matplotlib初体验/first_blood.png]]
+
+如果采用面向对象的写法则为
+
+#+BEGIN_SRC python
+  # 从 matplotlib 中引入 pyplot
+  from matplotlib import pyplot as plt
+
+  # 生成 figure 对象，figure 就是一张图
+  fig = plt.figure()
+  # 添加子图 ax
+  ax = fig.add_subplot(111)
+  # 绘制折线图
+  ax.plot([1, 2], [1, 2])
+  # 显示图像
+  plt.show()
+#+END_SRC
+
+当然，这样的图要是放在论文里，一定会被骂得狗血淋头，我们还需要对它进行细致的调整。
+
+*** 添加标题（title）和轴标签（axis label）
+    :PROPERTIES:
+    :CUSTOM_ID: 添加标题title和轴标签axis-label
+    :END:
+
+在一张数据图中，除数据外最重要的就是标题与轴标签了。可添加以下代码实现：
+
+#+BEGIN_SRC python
+  # 设置子图标题
+  ax.set_title("My First Plot")
+  # 设置 x 轴标签
+  ax.set_xlabel('x')
+  # 设置 y 轴标签
+  ax.set_ylabel('y')
+#+END_SRC
+
+注意使用 ax 对象所做的所有设置都只对当前子图有效，设置总标题需要使用如下设置：
+
+#+BEGIN_SRC python
+  fig.suptitle("Total Title")
+#+END_SRC
+
+#+CAPTION: 第一张完整图
+[[file:使用matplotlib进行科学绘图第一弹-matplotlib初体验/first_completed_figure.png]]
+
+这样，我们就得到了第一张包含数据、标题、轴标签的完整的图！

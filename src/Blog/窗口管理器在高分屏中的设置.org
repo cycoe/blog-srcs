@@ -1,0 +1,71 @@
+#+TITLE: 窗口管理器在高分屏中的设置
+#+DATE: <2019-12-05 Thu 22:55>
+#+LAYOUT: post
+#+TAGS: Linux, DWM, HiDPI
+#+CATEGORIES: Linux
+
+前几天换了新机器，也算是让贫穷的我第一次体验到了高分屏。13.3 寸的 2K 屏，用默认
+的缩放比例，字比蚂蚁大不了多少。为了保护视力，我决定将调整屏幕缩放提到最高优先级，
+摸索一阵后，得到了比较完美的配置方案。
+
+#+HTML: <!-- more -->
+
+在 Linux 中（此处特指 X.org 显示服务器，Wayland 不了解），传统的 X Clients 的缩
+放由 xrandr 控制，GTK 的 QT 程序的缩放由它们自己的环境变量控制。因此想要完美调整
+所有界面的缩放比例需要一番摸索。当然，Gnome、KDE 之类的桌面环境除外，桌面环境设
+置中一般都自带缩放设置。
+
+** 降低分辨率
+   :PROPERTIES:
+   :CUSTOM_ID: 降低分辨率
+   :END:
+
+直接通过 xrandr 降低显示器的分辨率是最简单粗暴的办法，但这样高分屏就相当于废了，
+不推荐。
+
+** 调整 Scale
+   :PROPERTIES:
+   :CUSTOM_ID: 调整-scale
+   :END:
+
+通过 xrandr 调整显示界面的 Scale，这种方法相当于用放大镜将屏幕上的内容放大，会使
+内容严重模糊，同样不推荐。
+
+** 通过 xrandr 设置 DPI
+   :PROPERTIES:
+   :CUSTOM_ID: 通过-xrandr-设置-dpi
+   :END:
+
+通过设置 DPI，其实就是告诉程序我的屏幕的细腻程度如何。如设置 DPI 为 144，就是告
+诉程序我的屏幕一英寸长度上有 144 个像素点。但此处也有技巧，第一种方法是直接使用
+xrandr 设置 DPI，在 =.xinitrc= 或 =.xprofile= 中加入 =xrandr --dpi 144= ，使得每
+次登录 X Server 时都会自动设置 DPI。但此方法对 GTK 程序无效，需要继续在文件中加入
+
+#+BEGIN_SRC sh
+  export GDK_SCALE=2
+  export GDK_DPI_SCALE=0.5
+#+END_SRC
+
+使得 GTK 程序支持缩放，但你应该也注意到了此处的两个问题。一是此处仍然使用的是缩
+放而非 DPI，会导致 GTK 程序界面模糊；二是 =GDK_SCALE= 只支持整数倍缩放。
+
+** 通过 xft 设置 DPI
+   :PROPERTIES:
+   :CUSTOM_ID: 通过-xft-设置-dpi
+   :END:
+
+这是我目前找到的完美的方法，还未遇到什么问题。在 =.Xresources= 文件中加入
+
+#+BEGIN_SRC conf
+  Xft.dpi: 144
+  Xft.autohint: 0
+  Xft.lcdfilter:  lcddefault
+  Xft.hintstyle:  hintfull
+  Xft.hinting: 1
+  Xft.antialias: 1
+  Xft.rgba: rgb
+#+END_SRC
+
+并在 =.xinitrc= 或 =.xprofile= 中加入 =xrdb -merge ".Xresources"= 使得每次登录时
+都会使 =.Xresources= 生效。 =xrdb= 命令需要首先安装 =xorg-xrdb= 包。至此，终于拥
+有了一个比较舒适的 DPI。

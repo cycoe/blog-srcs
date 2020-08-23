@@ -1,0 +1,141 @@
+#+TITLE: 与 C++ 的第二类接触-变量和基本类型
+#+DATE: <2020-05-28 Thur 22:03>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+** 变量和基本类型
+#+CAPTION: 指定字面值的类型
+[[file:./C++-学习记录/Screenshot_20200527_215053_QbzyBU.png]]
+
+*** 可以用先定义的变量去初始化后定义的变量
+#+begin_src C++ :results none
+  double price = 109.99, discount = price * 0.16;
+#+end_src
+*** 列表初始化
+以下的 4 条初始化语句都是合法的
+#+begin_src C++ :results none
+  int units_sold = 0;
+  int units_sold = {0};
+  int units_sold{0};
+  int units_sold(0);
+#+end_src
+
+如果我们使用列表初始化且初始值存在丢失信息的风险时，编译器将报错
+#+begin_src C++ :results none
+  long double ld = 3.1415926536;
+  int a{ld}, b = {ld};  // 错误：转换未执行，因为存在丢失信息的风险
+  int c(ld), d = ld;    // 正确：转换执行，且确实丢失了部分值
+#+end_src
+
+*** 默认初始化
+在未显式初始化时，全局的变量会被初始化为 0 ，函数内部的变量不初始化
+#+begin_src C++ :includes <iostream>
+  std::string global_str;
+  int global_int;
+
+  int main(int argc, char *argv[])
+  {
+    int local_int;
+    std::string local_str;
+    std::cout << "Global string is: " << global_str << std::endl;
+    std::cout << "Global int is: "    << global_int << std::endl;
+    std::cout << "Local string is: "  << local_str  << std::endl;
+    std::cout << "Local int is: "     << local_int  << std::endl;
+    return 0;
+  }
+#+end_src
+
+#+RESULTS:
+| Global | string | is: |       |
+| Global | int    | is: |     0 |
+| Local  | string | is: |       |
+| Local  | int    | is: | 22083 |
+
+*** 声明与定义
+声明用来创建一个符号，定义用来创建实体、分配内存甚至初始化。如果只是想声明变量需
+要使用 =extern= 关键字，声明变量一般使用在分离式编译中。如果有一个变量我们希望在多
+个文件中使用，我们只能在一个文件中进行定义，在其它文件中进行声明。此时 =extern= 关
+键字会告诉编译器这个变量只是在此处声明，定义需要去其它文件中找，此时该变量也就是
+一个全局变量，如果试图在函数体内部初始化一个 =extern= 标记的变量，将引发错误。
+#+begin_src C++ :results none
+  extern int i;              // 声明 i 而非定义 i
+  int j;                     // 声明并定义 j
+  extern double pi = 3.1416; // 显式初始化都会成为定义
+#+end_src
+
+*** 变量标识符
+与 Python 不同，C++ 中的标识符不能以两个连续的下画线开头，也不能以下画线紧连大写
+字母开头。此外，定义在函数体外的标识符不能以下画线开头。因此以下标识符都是不合法
+的
+#+begin_src C++ :results none
+  float _global_price;
+
+  int main() {
+    int __num;
+    float _Price;
+
+    return 0;
+  }
+#+end_src
+
+*** 引用
+引用（reference）是为对象起了另外一个名字。如果学过 Python 中的引用，这里应该比
+较好理解，引用以及原始对象都指向内存中的同一区域。但引用本身不是一个对象，因此不
+能定义引用的引用，也不能定义指向引用的指针。
+#+begin_src C++ :results none
+  int iVal = 1024;
+  int &refVal = ival;      // refVal 指向 iVal
+  int &refVal2;            // 报错：引用必须被初始化
+  int &refVal3 = refVal;   // 报错：不能定义引用的引用
+  int *val_ptr = &refVal;  // 报错：不能定义引用的指针
+#+end_src
+
+以下为一个示例
+#+begin_src C++ :includes <iostream>
+  int i, &ri = i;
+  i = 5; ri = 10;
+  std::cout << i << " " << ri << std::endl;
+#+end_src
+
+#+RESULTS[7d079ee6b4dad312a79027d8a2bc6eba16772098]:
+: 10 10
+
+*** 空指针
+#+begin_src C++ :includes <iostream>
+  #include <cstdlib>
+
+  int *p1 = nullptr;         // 等价于 int *p1 = 0;
+  int *p2 = 0;               // 直接将 p2 初始化为字面常量 0
+  // C 语言的写法，需要首先 #include <cstdlib>
+  int *p3 = NULL;            // 等价于 int *p3 = 0;
+
+  std::cout << "p1 is " << p1 << std::endl;
+  std::cout << "p2 is " << p2 << std::endl;
+  std::cout << "p3 is " << p3 << std::endl;
+#+end_src
+
+#+RESULTS[45add7ca33f26ae410cbd524a44424f3dfb620d5]:
+: p1 is 0
+: p2 is 0
+: p3 is 0
+
+*** =void*= 指针
+=void*= 指针是一类特殊的指针类型，只记录对象的地址而不记录对象的内存空间大小
+#+begin_src C++ :results none
+  double obj = 3.14, *pd = &obj;
+  void *pv = &obj;
+  pv = pd;
+#+end_src
+
+*** =const= 常量限定符
+*** 命名空间的 =using= 声明
+#+begin_src C++ :includes <iostream> :results none
+  using std::cin; using std::endl;
+
+  int i;
+  cin >> i;                 // 正确：cin 和 std::cin 含义相同
+  cout << i;                // 错误：没有对应的 using 声明，必须使用完整的名字
+  std::cout << i << endl>;  // 正确：显式地从 std 中使用 cout
+#+end_src

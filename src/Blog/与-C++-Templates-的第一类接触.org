@@ -1,0 +1,1858 @@
+#+TITLE: 与 C++ Templates 的第一类接触
+#+DATE: <2020-06-09 Tue 15:51>
+#+LAYOUT: post
+#+TAGS: C++, Demo
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+** Function Templates
+*** A First Look at Function Templates
+defining a simple function template
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+
+  template<typename T>
+  T max(T a, T b)
+  {
+    // We use copy rather than reference here
+    // So T has to be copyable to return
+    return b < a? a: b;
+  }
+
+  int main()
+  {
+    int i = 42;
+    // Use :: to ensure find the max template in global namespace
+    // rather than std::max
+    std::cout << "max(7, i) is " << ::max(7, i) << std::endl;
+
+    double f1 = 3.4;
+    double f2 = -6.7;
+    std::cout << "max(f1, f2) is " << ::max(f1, f2) << std::endl;
+
+    std::string s1 = "hello";
+    std::string s2 = "world";
+    std::cout << "max(s1, s2) is " << ::max(s1, s2) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[12cde6af09cdb2cfebc211c5286a58061bc0a99b]:
+: max(7, i) is 42
+: max(f1, f2) is 3.4
+: max(s1, s2) is world
+
+The function template was called for three times, one for <int, int>, one for
+<double, double> and one for <string, string>. Compiler generated specific
+function for each type.
+
+#+begin_src C++ :eval no :file-name foo.cc
+  int max(int, int);
+  double max(double, double);
+  std::string max(std::string, std::string);
+#+end_src
+
+=void= is a valid template argument
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T>
+  T foo(*T) { }
+
+  int main()
+  {
+    void *vp = nullptr;
+    foo(vp);              // OK: deduced void foo(void*)
+  }
+#+end_src
+
+There are two phases in template compilation
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T>
+  void foo(T t)
+  {
+    undeclared();   // first phase: compile-time error if undeclared not found
+    undeclared(t);  // second phase: compile-time error if undeclared(t) not found
+    static_assert(sizeof(int) > 10,  // always fails if sizeof(int) < 10
+                  "int too small");
+    static_assert(sizeof(T) > 10,    // fails if instantiated for T with size <= 10
+                  "T too small");
+  }
+#+end_src
+
+namely, if a expression can be determined without the exact type of =T= is in
+first phase, otherwise it's in second phase.
+
+*** Template Argument Deduction (模板参数推断)
+if we call =::max= with =(1, 2)=, obviously the argument type is deduced as =int=. But
+sometimes argument deduction is difficult. =T= can be *part* of the type.
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T>
+  // When pass (1, 2), T is deduced to int and the full type id int const&
+  T max(T const &a, T const &b)
+  {
+    return b < a? a: b;
+  }
+#+end_src
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T>
+  T max(T a, T b);
+
+  int i = 17;
+  int const c = 42;
+  max(i, c);    // OK: T is deduced as int, because the const of c is ignored
+  max(c, c);    // OK: T is deduced as int
+  int &ir = ;
+  max(i, ir);   // OK: T is deduced as int
+  int arr[4];
+  max(&i, arr); // OK: T is deduced as int*
+
+  max(4, 7.2);  // Error: T can be deduced as int or double
+  string s;
+  max("hi", s); // Error: T can be deduced as char const[6] or std::string
+#+end_src
+
+There are three ways to handle such errors:
+- Cast the argument so that they both match
+#+begin_src C++ :eval no
+  max(static_cast<double>(4), 7.2);
+#+end_src
+- Specify explicitly the type of =T= to prevent compiler from type deduction
+#+begin_src C++ :eval no
+  max<double>(4, 7.2);
+#+end_src
+- Specify that the parameters may have different types
+
+同时注意一点，模板无法对函数中的默认参数进行类型推断，若想要实现对函数默认参数的
+推断，需要对同时声明模板参数中的默认类型
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T>
+  void f(T = "");
+
+  f(1);  // 正确：T 被推断为 int，展开为 f<int>(1)
+  f();   // 错误：无法推断 T 的类型
+
+  // 为 T 声明默认类型
+  template<typename T = std::string>
+  void f(T = "");
+
+  f();   // 正确：T 被推断为 std::string，展开为 f<std::string>("")
+#+end_src
+
+*** 多参数模板
+
+上面我们定义的 =max= 函数模板只能用于比较两个同类型的对象，当我们希望比较不同类型
+的对象时我们就需要多参数模板
+
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T1, typename T2>
+  T1 max(T1 a, T2 b)
+  {
+    return b < a ? a : b;
+  }
+
+  auto m = ::max(4, 7.2);   // 调用正确：返回 7
+  auto n = ::max(7.2, 4);   // 调用正确：返回 7.2
+#+end_src
+
+使用以上方法能够处理两个不同类型的值，但遇到了新问题。函数返回的类型依赖于第一个
+传入参数的类型，这就导致了 =::max(4, 7.2)= 返回 =7 -> int= ， =::max(7.2, 4)= 返回 =7.2
+-> double= ，不符合调用者的意图。
+
+**** 第一种解决方法是引入一个模板参数作为返回类型
+调用函数模板时可以不指明模板参数，此时会进行自动推断，但套用到返回值类型上就失效
+了。因为模板其实是自动化重载的过程，重载不考虑返回值类型，那么模板也就无法对返回
+值类型进行推导。即使定义如下模板：
+#+begin_src C++ :eval no
+  template<typename T1, typename T2, typename RT>
+  RT max(T1 a, T2 b);
+#+end_src
+
+也无法通过 =auto m = max(4, 7.2);= 的方式对返回类型进行推导，只能通过显式指明模板
+参数来调用，非常不优雅
+#+begin_src C++ :eval no
+  auto m = ::max<int, double, double>(4, 7.2);
+#+end_src
+
+当然也可将返回值类型放在最前面，同时只显式指明返回值类型，传入参数类型采用自动推
+断，但这么做也并不能从本质上降低问题的复杂度，与采用一个参数并显式指明类型无异
+
+**** 第二种解决方法是利用自动类型推断                                :CPP14:
+使用 =auto= 关键字使编译器从返回语句中进行自动类型推导，当然这个类型是从函数体的返
+回值类型推导出来的
+#+begin_src C++ :eval no
+  template<typename T1, typename T2>
+  auto max(T1 a, T2 b)
+  {
+    return b < a ? a : b;
+  }
+#+end_src
+
+也可以使用 =尾置返回类型= 语法从 =?:= 表达式中自动推断。注意到上面只是一个声明式，通
+过 =尾置返回类型= 确定返回值类型的好处是即使只有声明编译器也能够通过 =?:= 运算符在编
+译期确定返回值类型。此处是一个 TRICK， =decltype= 并不是真的对 =?:= 表达式进行了求解
+（否则也无法在编译期确定），而是 =decltype= 直接推导出了 a 和 b 的满足类型，
+=decltype= 中改写为 =true?a:b= 也是一样的效果
+#+begin_src C++ :eval no :file-name foo.cc
+  template<typename T1, typename T2>
+  auto max(T1 a, T2 b) -> decltype(b<a?a:b);
+#+end_src
+
+此处还有一个问题，正常来说 =auto= 会对类型产生退化，如引用类型退化成普通类型
+
+#+begin_src C++ :eval no
+  int i = 42;
+  int const& ir = i;
+  auto a = ir;       // 此时 a 是普通 int 型
+#+end_src
+
+因此需要手动对返回类型进行退化
+
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <type_traits>
+
+  template<typename T1, typename T2>
+  // TODO 此处还不明白为什么要用到 typename，书上说 Because the member type is a
+  // type, you have to qualify the expression with typename to access it
+  auto max(T1 a, T2 b) -> typename std::decay<decltype(true?a:b)>::type {
+    return b < a ? a : b;
+  }
+#+end_src
+
+**** 第三种解决方法是返回一个 =common_type=                            :CPP11:
+使用 =std::common_type<>::type= 生成两个不同类型的通用类型，从 C++11 开始可以使用
+=typename std::common_type<T1, T2>::type= ，从 C++14 开始可简化为
+=std::common_type_t<T1, T2>= ，同时注意， =std::common_type<>::type= 也会发生退化
+
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <type_traits>
+
+  // 从 C++11 开始
+  template<typename T1, typename T2>
+  // std::common_type 是一个类型萃取
+  typename std::common_type<T1, T2>::type max(T1 a, T2 b);
+  {
+    return b < a ? a : b;
+  }
+
+  // 从 C++14 开始
+  template<typename T1, typename T2>
+  std::common_type_t<T1, T2> max(T1 a, T2 b);
+  {
+    return b < a ? a : b;
+  }
+#+end_src
+
+*** 默认模板参数
+对于上面的例子，如果我们希望返回值通过自动推导得出，同时也提供手动指定返回类型的
+灵活性，我们就会用到默认模板参数
+
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <type_traits>
+
+  template<typename T1, typename T2,
+           // 1. 此处变量 a 和 b 还未声明，只能直接使用它们的类型进行默认构造，
+           //    因此要保证 T1 和 T2 有默认构造函数
+           // 2. std::decay_t<> 在 C++14 引入，C++11 使用 std::decay<>::type
+           typename  RT = std::decay_t<decltype(true? T1() : T2())>>
+  RT max(T1 a, T2 b)
+  {
+    return b < a ? a : b;
+  }
+#+end_src
+
+或者使用 =std::common_type=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <type_traits>
+
+  template<typename T1, typename T2,
+           typename  RT = std::common_type_t<T1, T2>>
+  RT max(T1 a, T2 b)
+  {
+    return b < a ? a : b;
+  }
+
+  int main() {
+    auto a = ::max(4, 7.2);
+    auto b = ::max<double, int, long double>(7.2, 4);
+    std::cout << "a is " << a << std::endl;
+    std::cout << "b is " << b << std::endl;
+  }
+#+end_src
+
+#+RESULTS[a7f1c5bf7c8c3596a98c6e33ea43262cc0f87856]:
+: a is 7.2
+: b is 7.2
+
+*** 函数模板重载
+函数模板本来就是一系列函数的重载，那么重载函数模板也合情合理
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <typeinfo>
+
+  // 两个 int 的最大值函数
+  int max(int a, int b)
+  {
+    std::cout << "This is the ordinary function" << std::endl;
+    return b < a ? a : b;
+  }
+
+  // 任意类型的最大值
+  template<typename T>
+  T max(T a, T b)
+  {
+    std::cout << "This is the function template, type T is "
+              << typeid(a).name() << std::endl;
+    return b < a ? a : b;
+  }
+
+  int main()
+  {
+    ::max(7, 42);         // 调用非模板函数 max(int, int)
+    ::max(7.0, 42.0);     // 调用 max<double> 有类型推断
+    ::max('a', 'b');      // 调用 max<char> 有类型推断
+    ::max<>(7, 42);       // 调用 max<int> 强制使用模板，有类型推断
+    ::max<double>(7, 42); // 调用 max<double> 已显式指明类型，无类型推断
+    ::max('a', 42.7);     // 调用非模板函数 max(int, int)，
+  }
+#+end_src
+
+#+RESULTS[1ae6a93c3926f89ec1a8c62f0ed8e3fc07639cdf]:
+: This is the ordinary function
+: This is the function template, type T is d
+: This is the function template, type T is c
+: This is the function template, type T is i
+: This is the function template, type T is d
+: This is the ordinary function
+
+模板函数重载的原则是，除非模板能生成更加合适的函数（参数更少地进行自动类型转换），
+否则选择非模板函数。对于最后一个例子，模板类型推断时不考虑自动类型转换，也就是说
+类型必须完美匹配才会使用模板函数，而该例子不符合，只能使用普通函数
+
+另一个更复杂的例子是当重载的两个函数模板仅返回类型不同时
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <typeinfo>
+
+  template<typename T1, typename T2>
+  auto max(T1 a, T2 b)
+  {
+    std::cout << "Return auto type." << std::endl;
+    return b < a ? a : b;
+  }
+
+  template<typename RT, typename T1, typename T2>
+  RT max(T1 a, T2 b)
+  {
+    std::cout << "Return RT type." << std::endl;
+    return b < a ? a : b;
+  }
+
+  int main()
+  {
+    auto a = ::max(4, 7.2);      // 使用第一个模板，展开为 max<int, double>
+    auto b = ::max<int>(7.2, 4); // 使用第二个模板，若使用第一个模板展开为
+                                 // max<int, int>，需要一次自动类型转换，若使用第
+                                 // 二个模板展开为 max<int, double, int>，无需转换
+    // auto c = ::max<int>(4, 7.2); // 错误：两个模板都能匹配
+  }
+#+end_src
+
+更复杂的重载情况
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <cstring>
+  #include <string>
+
+  // 任意类型的最大值
+  template<typename T>
+  T max(T a, T b)
+  {
+    std::cout << "function template for any type." << std::endl;
+    return b < a ? a : b;
+  }
+
+  // 指针中的最大值
+  template<typename T>
+  T* max(T* a, T* b)
+  {
+    std::cout << "function template for any pointer." << std::endl;
+    return *b < *a ? a : b;
+  }
+
+  // C 风格字符串中的最大值
+  char const* max(char const* a, char const* b)
+  {
+    std::cout << "function template for C-like strings." << std::endl;
+    return std::strcmp(b, a) < 0 ? a : b;
+  }
+
+  int main()
+  {
+    int a = 7;
+    int b = 42;
+    auto m1 = ::max(a, b);
+
+    std::string s1 = "hello";
+    std::string s2 = "world";
+    auto m2 = ::max(s1, s2);
+
+    int* p1 = &b;
+    int* p2 = &a;
+    auto m3 = ::max(p1, p2);
+
+    char const* cs1 = "devil";
+    char const* cs2 = "C++";
+    auto m4 = ::max(cs1, cs2);
+  }
+#+end_src
+
+#+RESULTS[196c3dba1db883ea0fc5424817fdd546a6c8fabd]:
+: function template for any type.
+: function template for any type.
+: function template for any pointer.
+: function template for C-like strings.
+
+有的时候模板重载也会带来很多问题。比如我已经完成使用两个引用类型参数求最大值的模
+板，然后在此基础上完成了三个引用类型参数的模板。此时，我突然想到要对 C 类型的字
+符串进行特殊处理，于是完成了 =char const* max(char const*, char const*)= 函数。调
+用三个 =int= 类型的 =max= 函数一切正常，但三个 =char const*= 类型的 =max= 函数会出现运行
+时错误
+
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <cstring>
+  #include <iostream>
+
+  // 两个引用的最大值函数模板
+  template<typename T>
+  T const& max(T const& a, T const& b)
+  {
+    std::cout << "function template for two references." << std::endl;
+    return b < a ? a : b;
+  }
+
+  // C 风格字符串中的最大值
+  char const* max(char const* a, char const* b)
+  {
+    std::cout << "function template for C-like strings." << std::endl;
+    return std::strcmp(b, a) < 0 ? a : b;
+  }
+
+  // 三个引用的最大值函数模板
+  template<typename T>
+  T const& max(T const& a, T const& b, T const& c)
+  {
+    std::cout << "function template for three references." << std::endl;
+    // 问题出在此处：若传入的 a,b,c 不是 char const* 类型则没有问题，若是 char
+    // const* 类型，则下方的 max 会调用 max(char const*, char const*)，外层的 max
+    // 通过值传递的方式返回一个指针并生成一个当前作用域的临时变量，返回临时变量的
+    // 指针会导致悬挂引用
+    return max(max(a, b), c);
+  }
+
+  int main()
+  {
+    auto m1 = ::max(7, 42, 68);
+    char const* s1 = "hello";
+    char const* s2 = "world";
+    char const* s3 = "!";
+    auto m2 = ::max(s1, s2, s3);
+  }
+#+end_src
+
+同时也要注意模板函数的声明顺序会影响调用的“可见性”
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  // 两个参数的最大值函数模板
+  template<typename T>
+  T max(T a, T b)
+  {
+    std::cout << "T max(T a, T b)" << std::endl;
+    return b < a ? a : b;
+  }
+
+  // 三个参数的最大值函数模板
+  template<typename T>
+  T max(T a, T b, T c)
+  {
+    std::cout << "T max(T a, T b, T c)" << std::endl;
+    return max(max(a, b), c);
+  }
+
+  // int 型参数的最大值函数
+  int max(int a, int b)
+  {
+    std::cout << "int max(int a, int b)" << std::endl;
+    return b < a ? a : b;
+  }
+
+  int main()
+  {
+    // 三次调用都为模板函数，因为 int max(int a, int b) 对于 T max(T a, T b, T c)
+    // 不可见
+    ::max(47, 11, 33);
+  }
+#+end_src
+
+#+RESULTS[6eb854c770aaa7ea8ec58925d11f82a735045ee7]:
+: T max(T a, T b, T c)
+: T max(T a, T b)
+: T max(T a, T b)
+
+** 类模板
+
+类模板最常见的用法是实现泛型容器类
+
+*** 实现 =Stack= 类模板
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <vector>
+  #include <cassert>
+
+  // Stack 类模板的声明
+  template<typename T>
+  class Stack {
+  private:
+    std::vector<T> elems;
+  public:
+    void push(T const &elem);          // 元素入栈
+    void pop();                        // 元素出栈
+    T const& top() const;              // 返回顶部元素的常量引用
+    bool empty() const {               // 返回栈是否为空
+      return elems.empty();
+    }
+    // 在类内使用 Stack 时无需显式指定 Stack<T>
+    Stack &extend(Stack const &stk);   // 使用另一个栈扩展当前栈
+  };
+
+  template<typename T>                 // 在实现类的成员函数时也应指明这是一个函数模板
+  void Stack<T>::push(T const &elem) { // 在类外部使用 Stack 时需显式声明类型 Stack<T>
+    elems.push_back(elem);
+  }
+
+  template<typename T>
+  void Stack<T>::pop() {
+    // 断言 Stack 非空，对空 Stack 调用 pop 和 top 是未定义行为
+    assert(!elems.empty());
+    // pop 方法只是单纯地移除了元素而不返回是为了异常安全，vector 也是这么做的
+    elems.pop_back();
+  }
+
+  template<typename T>
+  T const &Stack<T>::top() const {
+    assert(!elems.empty());
+    return elems.back();              // 书上此处有错误，vector<T>.back() 返回的应
+                                      // 是引用，而不是拷贝
+  }
+
+  template<typename T>
+  Stack<T> &Stack<T>::extend(const Stack<T> &stk) {
+    for (T const &ele : stk.elems) {
+      elems.push_back(ele);
+    }
+    return *this;
+  }
+
+  int main() {
+    Stack<int> intStack;
+    Stack<std::string> stringStack;
+    Stack<std::string> stringStack2;
+
+    // 使用 Stack<int>
+    intStack.push(7);
+    std::cout << intStack.top() << std::endl;
+
+    // 使用 Stack<std::string>
+    stringStack.push("hello, ");
+    std::cout << stringStack.top() << std::endl;
+    stringStack2.push("world!");
+    // 扩展栈
+    std::cout << stringStack.extend(stringStack2).top() << std::endl;
+
+    // 也可以定义类模板的别名，模板本身也可以作为模板的参数
+    using IntStackStack = Stack<Stack<int>>;
+    IntStackStack iss;
+    iss.push(intStack);
+    std::cout << iss.top().top() << std::endl;
+  }
+#+end_src
+
+#+RESULTS[961eb7d071d25ea2da1363e6954cbb5b35de956a]:
+: 7
+: hello, 
+: world!
+: 7
+
+*** 模板的非完整使用
+
+模板参数类无需提供所有类模板成员函数中的所有实现，只需提供用到的实现即可保证编译
+通过
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+
+  template<typename T>
+  class Stack {
+  private:
+    std::vector<T> elems;
+  public:
+    Stack& push(T const &elem) {
+      elems.push_back(elem);
+      return *this;
+    }
+    T const& top() const {
+      return elems.back();
+    }
+    // 实现一个成员函数用于打印栈中的所有元素
+    void printAll(std::ostream& os) const {
+      for (T const& elem : elems) {
+        std::cout << elem << " ";
+      }
+    }
+  };
+
+  int main()
+  {
+    Stack<std::pair<int, int>> ps;   // 此处的 pair<> 容器没有实现 << 运算符
+    ps.push({4, 5}).push({6, 7});
+    std::cout << ps.top().first << std::endl;  // 调用 top 没有问题
+    std::cout << ps.top().second << std::endl;
+    // ps.printAll(std::cout);      // 错误：pair<> 未实现 <<
+  }
+#+end_src
+
+#+RESULTS[ccaac3a4e7fce4c692b1cb562601cef40954c9b1]:
+: 6
+: 7
+
+这也就引出了一个问题，由于此错误导致编译失败的错误信息难以阅读，那么我们在实现成
+员函数时就应手动对参数 =T= 的实现就检查。从 C++11 开始，至少可以通过 =static_assert=
+进行一部分检查
+
+#+begin_src C++ :eval no :file-name foo.cc
+  #include <iostream>
+
+  template<typename T>
+  class C
+  {
+    // 对类型 T 进行静态断言，检查是否实现了默认构造函数
+    static_assert(std::is_default_constructible<T>::value,
+                  "Class C requires default-constructible elements.");
+    ...
+  };
+#+end_src
+
+*** 类模板友元函数
+
+相对于实现一个打印的成员函数，一种更通用的做法是重载 =<<= 运算符
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+
+  template<typename T>
+  class Stack {
+  private:
+    std::vector<T> elems;
+  public:
+    Stack& push(T const &elem) {
+      elems.push_back(elem);
+      return *this;
+    }
+    void printAll(std::ostream& os) const {
+      for (T const& elem : elems) {
+        std::cout << elem << " ";
+      }
+    }
+    // 注意：此处 operator<< 并不是 Stack<T> 类的成员，也不是一个函数模板，只是一
+    // 个定义在类内部的模板化实体，也就是说它只是定义在类内的一个普通函数，函数参
+    // 数中使用了特化的 Stack<T> 类而已
+    friend std::ostream& operator<< (std::ostream& os,
+                                     Stack<T> const& s) {
+      s.printAll(os);
+      return os;
+    }
+  };
+
+  int main()
+  {
+    Stack<int> is;
+    is.push(7).push(42).push(68);
+    std::cout << is << std::endl;
+  }
+#+end_src
+
+#+RESULTS[9b60b019e9e29d0ac919f866b2d03ff46d2cc964]:
+: 7 42 68
+
+如果我们要分离声明和定义事情就会变得复杂。一种方法是隐式地定义一个新的函数模板
+
+#+begin_src C++ :file-name foo.cc :eval no
+  template<typename T>
+  class Stack {
+    ...
+    // 声明为一个新的函数模板，此处的模板参数 U 与类模板中的 T 无关。该声明有两个
+    // 作用：一是声明函数模板，二是声明该函数模板为 class Stack 的友元
+    template<typename U>
+    friend std::ostream& operator<< (std::ostream& os, Stack<U> const& s);
+  };
+#+end_src
+
+第二种方法是提前声明 =operator <<= 函数模板
+
+#+begin_src C++ :file-name foo.cc :eval no
+  template<typename T>   // 声明 Stack 类模板，供 << 重载使用
+  class Stack;
+  template<typename T>   // 将运算符重载函数声明为模板函数
+  std::ostream& operator<< (std::ostream&, Stack<T> const &);
+
+  template<typename T>
+  class Stack {
+    ...
+    // 注意函数名 operator<< 后面的 <T>，我们声明了一个特化的非成员函数模板作为友
+    // 元，如果没有 <T> 那么又是声明了一个新的非模板函数
+    friend std::ostream& operator<< <T> (std::ostream& os, Stack<T> const& s);
+  };
+#+end_src
+
+*** 类模板特化
+
+将泛型特化为具体类型
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <deque>
+  #include <vector>
+  #include <string>
+  #include <cassert>
+
+  // Stack 泛型类模板
+  template<typename T>
+  class Stack {
+  private:
+    std::vector<T> elems;
+  public:
+    void push(T const &elem);          // 元素入栈
+    T const& top() const;              // 返回顶部元素的常量引用
+    bool empty() const {               // 返回栈是否为空
+      return elems.empty();
+    }
+  };
+
+  template<typename T>                 // 在实现类的成员函数时也应指明这是一个函数模板
+  void Stack<T>::push(T const &elem) { // 在类外部使用 Stack 时需显式声明类型 Stack<T>
+    elems.push_back(elem);
+  }
+
+  template<typename T>
+  T const &Stack<T>::top() const {
+    assert(!elems.empty());
+    std::cout << "Use the general Stack template." << std::endl;
+    return elems.back();
+  }
+
+  // 针对 std::string 特化的类，无需  template<> 模板参数
+  template<>
+  // Stack 后参数全部特化，同时特化类时需要特化所有成员函数
+  class Stack<std::string> {
+  private:
+    // 使用 deque 而不是 vector，只是为了突显区别
+    std::deque<std::string> elems;
+
+  public:
+    void push(std::string const &elem); // 元素入栈
+    std::string const& top() const;     // 返回顶部元素的常量引用
+    bool empty() const {                // 返回栈是否为空
+      return elems.empty();
+    }
+  };
+
+  void Stack<std::string>::push(std::string const &elem) {
+    elems.push_back(elem);
+  }
+
+  std::string const& Stack<std::string>::top() const {
+    assert(!elems.empty());
+    std::cout << "Use the specialized Stack template for std::string." << std::endl;
+    return elems.back();
+  }
+
+  int main()
+  {
+    Stack<int> is;
+    is.push(1);
+    is.push(2);
+    std::cout << is.top() << std::endl;
+
+    Stack<std::string> ss;
+    ss.push("hello");
+    ss.push("world");
+    std::cout << ss.top() << std::endl;
+  }
+#+end_src
+
+#+RESULTS[3c60b4e1f4dd30f559ead7cb4d8ac96f4a52ea8d]:
+: Use the general Stack template.
+: 2
+: Use the specialized Stack template for std::string.
+: world
+
+*** 偏特化（部分特化）
+
+进行部分的特化，同时仍保留一定的泛型能力
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <string>
+  #include <cassert>
+
+  // Stack 泛型类模板
+  template<typename T>
+  class Stack {
+  private:
+    std::vector<T> elems;
+  public:
+    void push(T const &elem);          // 元素入栈
+    T const& top() const;              // 返回顶部元素的常量引用
+    bool empty() const {               // 返回栈是否为空
+      return elems.empty();
+    }
+  };
+
+  template<typename T>                 // 在实现类的成员函数时也应指明这是一个函数模板
+  void Stack<T>::push(T const &elem) { // 在类外部使用 Stack 时需显式声明类型 Stack<T>
+    elems.push_back(elem);
+  }
+
+  template<typename T>
+  T const &Stack<T>::top() const {
+    assert(!elems.empty());
+    std::cout << "Use the general Stack template." << std::endl;
+    return elems.back();
+  }
+
+  // 偏特化为指针类型模板
+  template<typename T>
+  // 此处的 Stack<T*> 表示偏特化为指针类型模板
+  class Stack<T*> {
+  private:
+    std::vector<T*> elems;
+  public:
+    void push(T* elem);          // 元素入栈
+    T* pop();                    // 弹出元素
+    T* top() const;              // 返回顶部元素的常量引用
+    bool empty() const {         // 返回栈是否为空
+      return elems.empty();
+    }
+  };
+
+  template<typename T>
+  void Stack<T*>::push(T* elem) {
+    elems.push_back(elem);
+  }
+
+  template<typename T>
+  T* Stack<T*>::pop() {
+    assert(!elems.empty());
+    // pop 返回了指针，使得模板的调用者可以利用返回的指针释放内存
+    T* p = elems.back();
+    elems.pop_back();
+    return p;
+  }
+
+  template<typename T>
+  T* Stack<T*>::top() const {
+    assert(!elems.empty());
+    std::cout << "Use the Stack template for pointers." << std::endl;
+    return elems.back();
+  }
+
+  int main() {
+    Stack<int*> ps;
+    // 将指针压入栈
+    ps.push(new int{42});
+    std::cout << *ps.top() << std::endl;
+    // 指针出栈并释放对应内存
+    delete ps.pop();
+  }
+#+end_src
+
+#+RESULTS[862ddda84a1801f2b08e38c42e8d130362a3acef]:
+: Use the Stack template for pointers.
+: 42
+
+另一种情况是多参数的模板偏特化
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  // 原始模板
+  template<typename T1, typename T2>
+  class C {
+  public:
+    C(T1 x, T2 y): x_(x), y_(y) {
+      std::cout << "C<T1, T2>" << std::endl;
+    }
+  private:
+    T1 x_ = 0;
+    T2 y_ = 0;
+  };
+
+  // 偏特化为两个模板参数具有相同的类型
+  template<typename T>
+  class C<T, T> {
+  public:
+    C(T x, T y): x_(x), y_(y) {
+      std::cout << "C<T, T>" << std::endl;
+    }
+  private:
+    T x_ = 0;
+    T y_ = 0;
+  };
+
+  // 偏特化为第二个参数为 int
+  template<typename T>
+  class C<T, int> {
+  public:
+    C(T x, int y): x_(x), y_(y) {
+      std::cout << "C<T, int>" << std::endl;
+    }
+  private:
+    T x_ = 0;
+    int y_ = 0;
+  };
+
+  // 偏特化为指针类型模板
+  template<typename T1, typename T2>
+  class C<T1*, T2*> {
+  public:
+    C(T1* x, T2* y): x_(x), y_(y) {
+      std::cout << "C<T1*, T2*>" << std::endl;
+    }
+  private:
+    T1* x_ = nullptr;
+    T2* y_ = nullptr;
+  };
+
+  int main() {
+    int a = 4;
+    float b = 4.2;
+    C<int, float> mif(4, 4.2);       // use C<T1, T2>
+    C<float, float> mff(4.2, 6.8);   // use C<T, T>
+    C<float, int> mfi(4.2, 2);       // use C<T, int>
+    C<int*, float*> mp(&a, &b);      // use C<T1*, T2*>
+
+    // 以下的实例化因为无法对应 **一个** 最匹配的模板因而是错误的
+    // C<int, int> m;     // 错误：匹配 C<T, T> 和 C<T, int>
+    // C<int*, int*> m;   // 错误：匹配 C<T, T> 和 C<T1*, T2*>
+  }
+#+end_src
+
+#+RESULTS[6b72957ce4e9b062d32ad665d604483ff1207732]:
+: C<T1, T2>
+: C<T, T>
+: C<T, int>
+: C<T1*, T2*>
+** 无类型模板参数
+** 变参模板
+*** 变参模板
+变参模板能够接受非确定数量的模板参数
+
+**** 示例
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <boost/type_index.hpp>
+
+  // 递归出口
+  void print() {
+    std::cout << "Call the recursion end function.";
+  }
+
+  // 打印任意数量的对象
+  template<typename T, typename... Ts>
+  void print(T arg, Ts... args) {
+    std::cout << "Call the variadic template. Argument type is: "
+              << boost::typeindex::type_id<T>().pretty_name() << std::endl;
+    std::cout << arg << std::endl;
+    print(args...);
+  }
+
+  int main() {
+    std::string s("world");
+
+    // 可根据调用顺序依次展开为
+    // print<double, char const*, std::string>(7.5, "hello", s);
+    // print<char const*, std::string>("hello", s);
+    // print<std::string>(s);
+    // print();
+    print(7.5, "hello", s);
+  }
+#+end_src
+
+#+RESULTS[b531d7cfbb0220ff24d75072af2f54ec82a55315]:
+: Call the variadic template. Argument type is: double
+: 7.5
+: Call the variadic template. Argument type is: char const*
+: hello
+: Call the variadic template. Argument type is: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >
+: world
+: Call the recursion end function.
+
+**** 重载变参与非变参模板
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <boost/type_index.hpp>
+
+  // 一个参数的模板
+  template<typename T>
+  void print(T arg) {
+    std::cout << "Call the ordinary template. Argument type is: "
+              << boost::typeindex::type_id<T>().pretty_name() << std::endl;
+    std::cout << arg << std::endl;
+  }
+
+  // 打印任意数量的对象
+  template<typename T, typename... Ts>
+  void print(T arg, Ts... args) {
+    std::cout << "Call the variadic template." << std::endl;
+    print(arg);      // 打印第一个参数
+    print(args...);  // 打印剩余的参数
+  }
+
+  int main() {
+    std::string s("world");
+
+    // 可根据调用顺序依次展开为
+    // print<double, char const*, std::string>(7.5, "hello", s);
+    // print<char const*, std::string>("hello", s);
+    // print<std::string>(s);
+    // 优先匹配非变参模板
+    print(7.5, "hello", s);
+  }
+#+end_src
+
+#+RESULTS[2f69a0705fb3efe51743e813efbf119afc6f187f]:
+: Call the variadic template.
+: Call the ordinary template. Argument type is: double
+: 7.5
+: Call the variadic template.
+: Call the ordinary template. Argument type is: char const*
+: hello
+: Call the ordinary template. Argument type is: std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >
+: world
+
+**** 类型变参与非类型变参
+变参模板中的参数包有两种形式，一种是类型变参指明模板参数为类型参数包，同时在调用
+时传入函数参数包，另一类是非类型变参，直接在模板参数处指明多个参数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  // 类型变参模板，Ts 为类型参数包
+  template<typename... Ts>
+  auto sum(Ts... args) {
+    std::cout << "Calling variadic type template" << std::endl;
+    return (... + args);
+  }
+
+  // 非类型变参模板，此时模板参数的值类型只能为 int 或 std::size_t
+  template<int... args>
+  auto sum() {
+    std::cout << "Calling variadic non-type template" << std::endl;
+    return (... + args);
+  }
+
+  int main() {
+    auto sum1 = sum(1, 2, 3, 4);    // 调用类型变参模板，此时参数类型自动推断
+    auto sum2 = sum<1, 2, 3, 4>();  // 调用非类型变参模板，通过模板参数指明求和的值
+    std::cout << "sum of 1, 2, 3, 4 is " << sum1 << std::endl;
+    std::cout << "sum of 1, 2, 3, 4 is " << sum2 << std::endl;
+  }
+#+end_src
+
+#+RESULTS[4fe43a111d65620a96ed23bd0639d1949e8b5e06]:
+: Calling variadic type template
+: Calling variadic non-type template
+: sum of 1, 2, 3, 4 is 10
+: sum of 1, 2, 3, 4 is 10
+
+**** =sizeof...= 运算符                                                :CPP11:
+
+=C++11= 标准引入了 =sizeof...= 运算符来获取参数包中的元素数量
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  template <typename... Ts>
+  void count_args(Ts... args) {
+    // 模板参数包中元素的个数
+    std::cout << "Number of types: " << sizeof...(Ts) << std::endl;
+    // 函数参数包中元素的个数
+    std::cout << "Number of arguments: " << sizeof...(args) << std::endl;
+  }
+
+  // 利用 sizeof... 实现 print
+  template<typename T, typename... Ts>
+  void print(T arg, Ts... args) {
+    std::cout << arg << std::endl;
+    // 默认情况下 if 语句是一个运行时的判断，无法在编译时确定分支，因此两个分支的
+    // 代码都会被实例化；C++17 后可使用 constexpr 使得 if 分支在编译期确定
+    if constexpr(sizeof...(args) > 0) {
+      print(args...);
+    }
+  }
+
+  int main() {
+    count_args(1, 2, 3, "hello");
+    print("hello", std::string("world"), 2020);
+  }
+#+end_src
+
+#+RESULTS[53679e3021d96b29754da851b986ae5aedef273e]:
+: Number of types: 4
+: Number of arguments: 4
+: hello
+: world
+: 2020
+
+*** 折叠表达式                                                   :CPP17:
+
+从 =C++17= 开始可以使用折叠表达式特性对参数包中的所有参数使用二元运算符进行计算，
+类似于 Python 中 =reduce= 函数的弱鸡版（ =reduce= 同时支持二元函数）。以 =+= 运算符为
+例有 4 种形式，前两种无初始值，后两种有初始值
+
+|---------------------+-------------------------------------|
+| 折叠表达式          | 求值方式                            |
+|---------------------+-------------------------------------|
+| (... + args)        | (((arg1 + arg2) + arg3) ... + argn) |
+| (args + ...)        | (arg1 + (... (argn-1 + argn)))      |
+| (init + ... + args) | (((init + arg1) + arg2) ... + argn) |
+| (args + ... + init) | (arg1 + (... (argn + init)))        |
+|---------------------+-------------------------------------|
+
+*注意* 如果参数包为空，表达式通常被称为“病态生成”，此时 =&&= 会返回 =true= ， =||= 会返回
+=false= ，逗号运算符会返回 =void()=
+
+折叠表达式几乎支持所有的二元运算符，也包括 =.*= 和 =->*= 这种组合运算符，以实现一个
+泛型二叉树寻路为例
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+
+  // 定义二叉树结点类模板
+  template<typename T>
+  struct Node {
+    T value;      // 泛型数据
+    Node* left;   // 左指针
+    Node* right;  // 右指针
+    Node(T value) : value(value), left(nullptr), right(nullptr) { }
+    // operator<< 函数并非 Node 类的成员，因此此处需要进行特化
+    friend std::ostream& operator<< (std::ostream& os, Node<T> const& node) {
+      return os << node.value << std::endl;
+    }
+  };
+
+  // 左右子节点的标识符模板
+  template<typename T>
+  auto left = &Node<T>::left;
+  template<typename T>
+  auto right = &Node<T>::right;
+
+  // 寻路方法，T 为节点指针类型，TP 为 left 或 right 标识符
+  template<typename T, typename... TP>
+  T traverse(T np, TP... paths) {
+    // 折叠表达式，初始值为 np，运算符为 ->*，参数包为 paths
+    return (np ->* ... ->* paths);
+  }
+
+  // 释放二叉树
+  template<typename T>
+  void delete_tree(Node<T>* root) {
+    if (root->left != nullptr) {
+      delete_tree(root->left);
+    }
+    if (root->right != nullptr) {
+      delete_tree(root->right);
+    }
+    delete root;
+  }
+
+  int main() {
+    // 定义一棵 std::string 二叉树
+    Node<std::string>* sroot = new Node<std::string>{"Root node"};
+    sroot->left = new Node<std::string>{"Hello, world!"};
+    sroot->left->right = new Node<std::string>{"Elegant Python."};
+    sroot->left->right->left = new Node<std::string>{"Evil C++."};
+
+    // 定义针对 std::string 类型的子节点标识符方便使用
+    auto sleft = left<std::string>;
+    auto sright = right<std::string>;
+
+    // 寻路 sroot->*sleft->*sright->*sleft
+    std::cout << *traverse(sroot, sleft, sright, sleft);
+
+    // 定义一棵 double 二叉树
+    Node<double>* droot = new Node<double>{0.0};
+    droot->right = new Node<double>{1.0};
+    droot->right->left = new Node<double>{3.14159265};
+
+    // 定义针对 double 类型的子节点标识符方便使用
+    auto dleft = left<double>;
+    auto dright = right<double>;
+
+    // 寻路 droot->*dright->*dleft
+    std::cout << *traverse(droot, dright, dleft);
+
+    // 释放内存
+    delete_tree(sroot);
+    delete_tree(droot);
+  }
+#+end_src
+
+#+RESULTS[086a3448e23130573c0a18a164e0caf1a790a556]:
+: Evil C++.
+: 3.14159
+
+有了折叠表达式后，我们就可以通过折叠表达式改写打印多个参数值的 =print= 函数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+
+  // 定义一个添加空格的包装类
+  template<typename T>
+  class AddSpaceWrapper {
+  public:
+    // 构造函数，将待包装的元素的引用传入
+    AddSpaceWrapper(T const& a): arg(a) { }
+    // 重载 arg 元素的 << 运算符，在输出后添加一个空格
+    friend std::ostream& operator<< (std::ostream& os, AddSpaceWrapper<T> const& rhs) {
+      return os << rhs.arg << " ";
+    }
+  private:
+    T const& arg;
+  };
+
+  // 打印变参的模板函数，问题在于无法直接在参数之间打印空格
+  template<typename... Ts>
+  void print(Ts... args) {
+    // 折叠表达式
+    // 展开为 (((std::cout << arg1) << arg2) << ...) << argn
+    // 注意 AddSpaceWrapper 包装类模板需指明参数 Ts 特化
+    (std::cout << ... << AddSpaceWrapper<Ts>(args)) << std::endl;
+  }
+
+  int main() {
+    print("hello", "world", "hello", "C++");
+    print(1, "+", 2, "=", 3);
+  }
+#+end_src
+
+#+RESULTS[8ad3fb20a49cf6456d17cec9d1b3c4025cd75427]:
+: hello world hello C++ 
+: 1 + 2 = 3
+
+*** 变参模板的应用
+变参模板在实现通用库中扮演重要的角色，比如 C++ 标准库的实现。一个典型的应用是转
+发任意数量任意类型的参数
+
+#+begin_src C++ :file-name foo.cc :flags "-lpthread"
+  #include <iostream>
+  #include <memory>
+  #include <complex>
+  #include <thread>
+  #include <vector>
+  #include <string>
+
+  void foo(int i, std::string s) {
+    std::cout << i << ", " << s << std::endl;
+  }
+
+  class Human {
+  public:
+    Human() = default;
+    Human(std::string name, std::string gender, std::size_t age) :
+      name(name), gender(gender), age(age) { }
+    friend std::ostream& operator<< (std::ostream& os, Human const& human) {
+      return os << "My name is " << human.name << ", I'm "
+                << human.gender << ", and I'm " << human.age << " years old.";
+    }
+  private:
+    std::string name;
+    std::string gender;
+    std::size_t age;
+  };
+
+  int main() {
+    // 在堆上构造一个对象并传入任意的参数，并创建一个共享指针
+    auto sp = std::make_shared<std::complex<float>>(4.2, 7.7);
+    std::cout << *sp << std::endl;
+
+    // 向线程中传递参数，在子线程中调用 foo(42, "foo");
+    std::thread t (foo, 42, "hello");
+    t.join();
+
+    // 向 vector 中 push 元素时传递参数到元素构造器
+    std::vector<Human> humans;
+    humans.emplace_back("Cycoe", "male", 25); // 使用三个参数构造 Human
+    std::cout << humans.back() << std::endl;
+  }
+#+end_src
+
+#+RESULTS[2924157b4bd6e6d713339f99fdd674a5447bad95]:
+: (4.2,7.7)
+: 42, hello
+: My name is Cycoe, I'm male, and I'm 25 years old.
+
+*** 变参类模板和变参表达式
+
+**** 变参表达式
+
+除了对参数包进行转发，你也可以直接对参数包进行计算，这种技巧被称为 =变参表达式=
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+
+  // 打印一个参数
+  template<typename T>
+  void print(T const& arg) {
+    std::cout << arg << std::endl;
+  }
+
+  // 打印多个参数
+  template<typename T, typename... Ts>
+  void print(T const& arg, Ts const &... args) {
+    std::cout << arg << ", ";
+    print(args...);
+  }
+
+  // 对一个元素倍乘
+  template<typename T>
+  T& mul2(T& t) {
+    return t += t;
+  }
+
+  // 打印多个元素的倍乘
+  template<typename... Ts>
+  void print_mul2(Ts... args) {
+    // 此处使用了变参的函数调用技巧
+    // 可展开为 print(mul2(arg1), mul2(arg2), ..., mul2(argn));
+    print(mul2(args)...);
+  }
+
+  // 打印多个元素的倍乘的另一种实现
+  template<typename... Ts>
+  void print_double(Ts... args) {
+    // 此处使用的是变参表达式的技巧
+    // 可展开为 print(arg1+arg1, arg2+arg2, ..., argn+argn);
+    print(args + args...);
+  }
+
+  // 打印每一个元素加一
+  template<typename... Ts>
+  void add_one(Ts const&... args) {
+    // print(args + 1...);  // 错误：此处 ... 被认为是小数点
+    // 以下三种形式等价
+    print(args + 1 ...);
+    print(1 + args...);
+    print((args + 1)...);
+  }
+
+  int main() {
+    print_mul2(1, 2, 3);
+    print_mul2(std::string("hello"), std::string("world"));
+    print_double(2.4, 5.8, std::string("number"));
+    print_double(std::string("evil"), std::string("C++"));
+    add_one(1, 2, 3);
+  }
+#+end_src
+
+#+RESULTS[1c27010993bbaf975a51e0c7227308fb1b14dc67]:
+: 2, 4, 6
+: hellohello, worldworld
+: 4.8, 11.6, numbernumber
+: evilevil, C++C++
+: 2, 3, 4
+: 2, 3, 4
+: 2, 3, 4
+
+另一种技巧是在编译期表达式中使用折叠表达式，以下面一个判断是否所有参数类型均相同
+的函数模板为例
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  // 判断参数类型是否全部相同
+  template<typename T, typename... Ts>
+  constexpr bool is_homogeneous(T, Ts...) {
+    return (std::is_same<T, Ts>::value && ...);
+  }
+
+  void print(bool const flag) {
+    if (flag) {
+      std::cout << "All arguments are same." << std::endl;
+    } else {
+      std::cout << "All arguments are not same." << std::endl;
+    }
+  }
+
+  int main() {
+    print(is_homogeneous("hello", "world", "hello", "C++"));
+    print(is_homogeneous(1, 2, 3, 4.2));
+  }
+#+end_src
+
+#+RESULTS[2605c6133dd1265b5529d3a258bc8a404798e291]:
+: All arguments are same.
+: All arguments are not same.
+
+**** 变参切片
+
+变参切片与变参函数调用类似，我将 =...= 理解为一种展开运算
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+
+  template<typename T>
+  void print(T arg) {
+    std::cout << arg << std::endl;
+  }
+
+  template<typename T, typename... Ts>
+  void print(T arg, Ts... args) {
+    std::cout << arg << ", ";
+    print(args...);
+  }
+
+  // 第一种实现，使用类型变参，调用函数时进行自动类型推断
+  template<typename C, typename... Idx>
+  void print_elems(C const& coll, Idx... idx) {
+    // 展开为 print(coll[idx1], coll[idx2], ..., coll[idxn]);
+    print(coll[idx]...);
+  }
+
+  // 第二种实现，使用参数变参，确定了变参类型为 std::size_t，此时模板参数作为索引
+  // 需要手动指定
+  template<std::size_t... Idx, typename C>
+  void print_elems(C const& coll) {
+    print(coll[Idx]...);
+  }
+
+  int main() {
+    std::vector<std::string> coll = {"hello", "world", "hello", "C++"};
+    // 注意两种方式的区别
+    print_elems(coll, 0, 3);
+    print_elems<0, 1, 2, 3>(coll);
+  }
+#+end_src
+
+#+RESULTS[dff167be64fa086281de52e900a9559d5b49b523]:
+: hello, C++
+: hello, world, hello, C++
+
+**** 变参类模板
+类模板也可以使用变参，两种典型的应用是 =Tuple= 和 =Variant=
+
+#+begin_src C++ :file-name foo.cc :eval no
+  template<typename... Elements>
+  class Tuple;
+  Tuple<int, std::string, char> t;    // t 能够处理三种类型
+
+  template<typename... Types>
+  class Variant;
+  Variant<int, std::string, char> v; // v 能够处理三种类型
+#+end_src
+
+另一个应用场景是用来定义一个切片索引的类，从中可以一窥模板元编程的冰山一角
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <tuple>
+
+  template<typename T>
+  void print(T arg) {
+    std::cout << arg << std::endl;
+  }
+
+  template<typename T, typename... Ts>
+  void print(T arg, Ts... args) {
+    std::cout << arg << ", ";
+    print(args...);
+  }
+
+  // 表示任意索引切片的类
+  template<std::size_t...>
+  struct Indices { };
+
+  // 打印 c 中索引为 Idx 的项
+  template<typename Con, std::size_t... Idx>
+  void printByIndex(Con c, Indices<Idx...>) {
+    print(std::get<Idx>(c)...);
+  }
+
+  int main() {
+    std::array<std::string, 4> arr = {"Hello", "world", "hello", "C++"};
+    printByIndex(arr, Indices<0, 1, 2, 3>());
+    auto t = std::make_tuple(4.2, 7.7, 42.0);
+    printByIndex(t, Indices<0, 1, 2>());
+  }
+#+end_src
+
+#+RESULTS[d0ed549148d20c8aa5f6573125a27b9099edff94]:
+: Hello, world, hello, C++
+: 4.2, 7.7, 42
+
+** 基础背后的奇技淫巧
+*** =typename= 关键词
+
+=typename= 关键词用来说明模板中的一个标识符是一种类型，以下实现了部分 =Array= 类的特
+性，并实现了一个打印容器中所有元素的函数模板 =printColl= 来进行演示
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+
+  // 定义 Array 类模板
+  template<typename T>
+  class Array {
+  public:
+    // 使用 using 定义类型别名
+    using iterator = T*;
+    using const_iterator = T const*;
+
+    Array(std::size_t len) : len(len) {
+      elems = new T[len];
+    }
+    ~Array() {
+      delete [] elems;
+    }
+    // 模仿标准库中的容器类，定义 begin 和 end 成员返回头元素和尾元素后指针，返回
+    // 的是自定义的迭代器类型
+    iterator begin() {
+      return elems;
+    }
+    iterator end() {
+      return elems + len;
+    }
+    // 当 this 是 const 对象时，返回 const_iterator 迭代器
+    const_iterator begin() const {
+      return elems;
+    }
+    const_iterator end() const {
+      return elems + len;
+    }
+    // 重载下标运算符
+    T& operator[] (std::size_t index) {
+      return elems[index];
+    }
+  private:
+    std::size_t len = 0;
+    T* elems = nullptr;
+  };
+
+  // 一个打印容器类中所有元素的函数模板
+  template<typename Con>
+  void printColl(Con const& coll) {
+    // 此处声明定义头尾迭代器，typename 说明 Con::const_iterator 是个类型。在这种
+    // 情况下 Con 是一个模板参数，const_iterator 是 Con 的一个类型，此时 typename
+    // 不能省略
+    typename Con::const_iterator pos;
+    typename Con::const_iterator end(coll.end());
+    for (pos = coll.begin(); pos != end; ++pos) {
+      std::cout << *pos << ", ";
+    }
+    std::cout << std::endl;
+  }
+
+  int main() {
+    // 使用自定义的 Array<int> 类
+    Array<int> iarr(5);
+    // 此处使用 auto 进行自动类型推断，pos 的完整类型为 typename
+    // Array<int>::iterator，此时 typename 可以省略
+    for (auto pos = iarr.begin(); pos != iarr.end(); ++pos) {
+      ,*pos = pos - iarr.begin();
+    }
+
+    // 此处 T 被自动推断为 Array<int>
+    printColl(iarr);
+
+    // 使用标准模板库的 vector 类
+    std::vector<std::string> svec{"hello", "world", "hello", "C++"};
+    // 使用 printColl 函数模板可以同样处理 vector 类，说明统一接口的好处
+    printColl(svec);
+  }
+#+end_src
+
+#+RESULTS[b3cdef908553a8f97081c7359b958a9c6c085d33]:
+: 0, 1, 2, 3, 4, 
+: hello, world, hello, C++,
+*** 零初始化
+像 =int= ， =double= ，或者指针类型这样的基本变量，不具备默认构造器因此无法将它们默
+认初始化为有用的值
+
+#+begin_src C++ :file-name foo.cc :includes <iostream>
+  void foo() {
+    int x;      // x 的值未定义
+    std::cout << x << std::endl;
+    int *ptr;   // ptr 可能指向任何地方
+    std::cout << ptr << std::endl;
+  }
+
+  int main() {
+    foo();
+  }
+#+end_src
+
+#+RESULTS[9479c82cc840d0776c2c87a27dd844e61d18915d]:
+: 22040
+: 0x56187a04c080
+
+当遇到模板时这种未定义行为就产生风险，因为无法确定传入的模板参数是什么类型，因此
+我们希望将内置类型进行零初始化
+
+#+begin_src C++ :file-name foo.cc :includes <iostream>
+  template<typename T>
+  void non_zero_init() {
+    T x;       // T 为内置类型时 x 为未定义值
+    std::cout << x << std::endl;
+  };
+
+  template<typename T>
+  void zero_init() {
+    T x{};     // 对 x 进行零初始化
+    std::cout << x << std::endl;
+  };
+
+  template<typename T>
+  void zero_init_another() {
+    T x = T(); // 对 x 进行零初始化，C++ 11 之前的方式
+    std::cout << x << std::endl;
+  };
+
+  int main() {
+    non_zero_init<int>();
+    zero_init<int>();
+    zero_init_another<int>();
+  }
+#+end_src
+
+#+RESULTS[fcca8207545ba99cf6b7e091ac519d9b02d03d59]:
+: 22057
+: 0
+: 0
+
+为使类模板的成员被初始化，需要在默认构造函数的初始化参数列中使用 =()= 或 ={}= 进行零
+初始化
+
+#+begin_src C++ :file-name foo.cc :includes <iostream>
+  template<typename T>
+  class C {
+  private:
+    T x;
+  public:
+    C() : x{} { }     // 对于内置类型 x 也能够被正确初始化
+    // C() : x() { }  // C++ 11 之前的语法
+    void print() { std::cout << x << std::endl; }
+  };
+
+  // 从 C++11 开始可以为非静态成员提供默认初始化
+  template<typename T>
+  class D {
+  private:
+    T x{};
+  public:
+    void print() { std::cout << x << std::endl; }
+  };
+
+  int main() {
+    C<int> c;
+    c.print();
+    D<int> d;
+    d.print();
+  }
+#+end_src
+
+#+RESULTS[e22ad4df4e5488cf1dfcae2adf1258f8a95a81d6]:
+: 0
+: 0
+
+另一点需要注意的是，函数的默认参数无法使用 =Type x{}= 这样的初始化语法
+
+#+begin_src C++ :file-name foo.cc :includes <iostream>
+  // 错误的语法
+  // template<typename T>
+  // void foo(T p{}) {
+  //   // 错误的语法
+  // }
+
+  template<typename T>
+  void bar(T p = T{}) {
+    std::cout << p << std::endl;
+  }
+
+  int main() {
+    // 可以使用默认参数，但此时必须进行类型特化
+    bar<int>();
+  }
+#+end_src
+
+#+RESULTS[83d22053facd793da838e3042a278cded385997e]:
+: 0
+
+*** 模板类继承中使用 =this->=
+
+在继承模板类时，使用从父类继承过来的成员需要使用 =this->=
+
+#+begin_src C++ :file-name foo.cc :eval no
+  template<typename T>
+  class Base {
+  public:
+    void bar();
+  };
+
+  template<typename T>
+  class Derived : Base<T> {
+  public:
+    void foo() {
+      // bar();           // 调用的是外部的 bar 函数
+      this->bar();        // 使用 this->
+      Base<T>::bar();     // 使用 Base<T> 类的作用域
+    }
+  };
+#+end_src
+*** 向模板中传入数组或字符串字面值
+通过引用向模板中传入数组或字符串字面值作为参数时，有两点需要注意：
+1. 一是若使用引用传递数组，数组不会退化为指针，此时传入不同长度的数组会非常麻烦
+2. 二是只有当通过值传递时字符串字面值会退化为 =char const*= 类型
+   
+解决这个问题的一种办法是同时将数组的长度作为模板参数，以一个比较两个数组大小的函
+数模板为例
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  // 比较两个数组的函数模板
+  template<typename T, int M, int N>
+  bool less(T (&a)[M], T (&b)[N]) {
+    for (int i = 0; i < M && i < N; ++i) {
+      if (a[i] < b[i]) return true;
+      if (a[i] > b[i]) return false;
+    }
+    return M < N;
+  }
+
+  // 针对字符串字面值和字符数组的模板
+  template<int M, int N>
+  bool less(const char (&a)[M], const char (&b)[N]) {
+    for (int i = 0; i < M && i < N; ++i) {
+      if (a[i] < b[i]) return true;
+      if (a[i] > b[i]) return false;
+    }
+    return M < N;
+  }
+
+  int main() {
+    int x[] = {1, 2, 3};
+    int y[] = {1, 2, 3, 4};
+    std::cout << less(x, y) << std::endl;              // less<>() 被推断为
+                                                       // less<int, 3, 4>
+    std::cout << less("hello", "world") << std::endl;  // less<>() 被推断为
+                                                       // less<const char, 6, 6>
+  }
+#+end_src
+
+#+RESULTS[bf643885d6e7932c6264058e28228693cbbdaa3d]:
+: 1
+: 1
+
+对于已知边界和未知边界的数组可以通过重载或偏特化出多个模板进行处理
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+
+  template<typename T>
+  struct Object;            // 主类
+
+  template<typename T, std::size_t SZ>
+  struct Object<T[SZ]> {    // 偏特化为已知长度的数组
+    static void print() { std::cout << "print() for T[" << SZ << "]\n"; }
+  };
+
+  template<typename T, std::size_t SZ>
+  struct Object<T(&)[SZ]> { // 偏特化为已知长度的数组的引用
+    static void print() { std::cout << "print() for T(&)[" << SZ << "]\n"; }
+  };
+
+  template<typename T>
+  struct Object<T[]> {      // 偏特化为未知长度的数组
+    static void print() { std::cout << "print() for T[]\n"; }
+  };
+
+  template<typename T>
+  struct Object<T(&)[]> {   // 偏特化为未知长度的数组的引用
+    static void print() { std::cout << "print() for T(&)[]\n"; }
+  };
+
+  template<typename T>
+  struct Object<T*> {       // 偏特化为指针
+    static void print() { std::cout << "print() for T*\n"; }
+  };
+
+  template<typename T1, typename T2, typename T3>
+  void foo(int a1[7], int a2[], // 由语法定义的等价指针
+           int (&a3)[42],       // 已知长度数组的引用
+           int (&x0)[],         // 未知长度数组的引用
+           T1 x1,               // 值传递会退化
+           T2& x2, T3&& x3)     // 引用传递
+  {
+    Object<decltype(a1)>::print();  // 使用 Object<T*>
+    Object<decltype(a2)>::print();  // 使用 Object<T*>
+    Object<decltype(a3)>::print();  // 使用 Object<T(&)[SZ]>
+    Object<decltype(x0)>::print();  // 使用 Object<T(&)[]>
+    Object<decltype(x1)>::print();  // 使用 Object<T*>
+    Object<decltype(x2)>::print();  // 使用 Object<T(&)[]>
+    Object<decltype(x3)>::print();  // 使用 Object<T(&)[]>
+  }
+
+  int main() {
+    int a[42];
+    Object<decltype(a)>::print();  // 使用 Object<T[SZ]>
+
+    extern int x[];
+    Object<decltype(x)>::print();  // 使用 Object<T[]>
+
+    foo(a, a, a, x, x, x, x);
+  }
+
+  int x[] = {0, 8, 15};
+#+end_src
+
+#+RESULTS[dd82726fb6badb0c93296e054a95eaadc73a54ab]:
+: print() for T[42]
+: print() for T[]
+: print() for T*
+: print() for T*
+: print() for T(&)[42]
+: print() for T(&)[]
+: print() for T*
+: print() for T(&)[]
+: print() for T(&)[]

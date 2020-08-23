@@ -1,0 +1,109 @@
+#+TITLE: C++ 中类的构造方法
+#+DATE: <2020-06-15 Mon 21:10>
+#+LAYOUT: post
+#+TAGS: C++
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+C++ 中实例化一个类时有多种方法，其中什么情况下会用到哪个构造函数有的时候太容易混
+淆，因此本文总结一下各种使用情况
+
+#+HTML: <!-- more -->
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+
+  class C {
+  private:
+    std::size_t n = 0;
+    std::string s = "Hello";
+  public:
+    // 默认构造函数：当声明对象如 C c 或调用默认构造函数如 C() 时调用
+    C() { std::cout << "Default constructor." << *this << std::endl; }
+    // 一个参数的构造函数
+    C(std::size_t n_): n(n_) {
+      n = 2;
+      std::cout << "Constructor with one argument." << *this << std::endl;
+    }
+    // 两个参数的构造函数，冒号后使用了初始化参数列
+    C(std::size_t n_, std::string s_): n(n_), s(s_) {
+      std::cout << "Constructor with two arguments." << *this << std::endl;
+    }
+    // 拷贝构造函数
+    C(C const& c) {
+      n = c.n;
+      s = c.s;
+      std::cout << "Copy constructor." << *this << std::endl;
+    }
+    // 赋值
+    C& operator= (C const& rhs) {
+      n = rhs.n;
+      s = rhs.s;
+      std::cout << "Assignment." << *this << std::endl;
+      return *this;
+    }
+    friend std::ostream& operator<< (std::ostream& os, C const& c) {
+      return os << " n: " << c.n << ", s: " << c.s;
+    }
+  };
+
+  int main() {
+    // 调用默认构造函数，第二种方法会生成一个匿名局部变量
+    std::cout << "Construct c1: ";
+    C c1;
+    std::cout << "Construct C(): ";
+    C();
+
+    // 调用拷贝构造函数，以下两种方式等价
+    std::cout << "Construct c2: ";
+    C c2(c1);
+    std::cout << "Construct c3: ";
+    C c3 = c1;
+    std::cout << "Construct C4 with C(): ";
+    C c4 = C(); // 从语法看会进行一次默认构造和一次拷贝构造，C() 生成临时对象一次
+                // 默认构造，用临时变量拷贝构造 c4 一次，实际只有一次默认构造
+
+    // 调用两个参数的构造函数，以下四种方式等价。此处需要注意的是成员初始化的先后
+    // 顺序，最先发生的是声明成员时的初始化，然后是构造函数的初始化参数列，最后是
+    // 构造函数内部的赋值
+    std::cout << "Construct c5: ";
+    C c5(1, "world");
+    std::cout << "Construct c6: ";
+    C c6{1, "world"};
+    std::cout << "Construct c7: ";
+    C c7 = {1, "world"};
+    std::cout << "Construct C(1, \"world\"): ";
+    C(1, "world");
+
+    // 调用一个参数的构造函数，以下两种方法等价。第二种方法说明当只有一个参数时可
+    // 省略花括号，此时会隐式地用参数 1 去构造 C（也就是说对应的构造函数必须不为
+    // explicit 的），也说明为什么 std::string s = "world"是合法的，即等价于
+    // std::string s{"world"}
+    std::cout << "Construct c8: ";
+    C c8 = {1};
+    std::cout << "Construct c9: ";
+    C c9 = 1;
+
+    // 此处并没有发生构造，只是用 c4 给 c1 赋值
+    std::cout << "Assignment c4 with c1: ";
+    c4 = c1;
+  }
+#+end_src
+
+#+RESULTS[cb5093358b1ef5a2531e21a8d5734dc13d428e8a]:
+#+begin_example
+Construct c1: Default constructor. n: 0, s: Hello
+Construct C(): Default constructor. n: 0, s: Hello
+Construct c2: Copy constructor. n: 0, s: Hello
+Construct c3: Copy constructor. n: 0, s: Hello
+Construct C4 with C(): Default constructor. n: 0, s: Hello
+Construct c5: Constructor with two arguments. n: 1, s: world
+Construct c6: Constructor with two arguments. n: 1, s: world
+Construct c7: Constructor with two arguments. n: 1, s: world
+Construct C(1, "world"): Constructor with two arguments. n: 1, s: world
+Construct c8: Constructor with one argument. n: 2, s: Hello
+Construct c9: Constructor with one argument. n: 2, s: Hello
+Assignment c4 with c1: Assignment. n: 0, s: Hello
+#+end_example
+

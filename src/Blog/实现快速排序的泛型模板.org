@@ -1,0 +1,184 @@
+#+TITLE: 实现快速排序的泛型模板
+#+DATE: <2020-07-08 Wed 13:30>
+#+LAYOUT: post
+#+TAGS: C++
+#+CATEGORIES: C++
+
+#+HTML: <!-- more -->
+
+** 快速排序泛型模板
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <vector>
+
+  template<typename Iter>
+  void print_items(Iter __beg, Iter __end)
+  {
+    if (__beg == __end)
+      return;
+
+    std::cout << "[";
+    while (__beg + 1 < __end) {
+      std::cout << *__beg++ << ", ";
+    }
+    std::cout << *__beg << "]" << std::endl;
+  }
+
+  // 快速排序内部实现方法
+  template<typename Iter>
+  Iter quick_sort_helper(Iter __beg, Iter __end)
+  {
+    // 将第一个元素记录并作为基准值
+    typename Iter::value_type pivot = *__beg;
+    // 将尾后指针向前移动，指向最后一个元素
+    --__end;
+    // 当左指针不等于右指针时
+    while (__beg < __end) {
+      // 从右侧找到第一个比基准值小的元素，并与基准位置互换
+      while (!(*__end < pivot) && __beg < __end) --__end;
+      ,*__beg = *__end;
+      // 从左侧找到第一个比基准值中的元素，并与基准位置互换
+      while (!(pivot < *__beg) && __beg < __end) ++__beg;
+      ,*__end = *__beg;
+    }
+    // 恢复基准位置的值
+    ,*__beg = pivot;
+    return __beg;
+  }
+
+  // 快速排序
+  template<typename Iter>
+  void quick_sort(Iter __beg, Iter __end)
+  {
+    // 此处 __end 是尾后指针，当只有一个元素时无无需排序，直接跳出
+    if (__beg + 1 < __end) {
+      // 获取基准位置迭代器
+      Iter mid = quick_sort_helper(__beg, __end);
+      // 对基准位置前面的元素进行排序
+      quick_sort(__beg, mid);
+      // 对基准位置后面的元素进行排序
+      quick_sort(mid + 1, __end);
+    }
+  }
+
+  int main()
+  {
+    // 对 std::vector<int> 进行排序
+    std::vector<int> ivec{3, 1, 2, 5, 4};
+    print_items(ivec.cbegin(), ivec.cend());
+
+    quick_sort(ivec.begin(), ivec.end());
+    print_items(ivec.cbegin(), ivec.cend());
+
+    // 对 std::vector<std::string> 进行排序
+    std::vector<std::string> svec{"hello", "world", "devil", "C++"};
+    print_items(svec.cbegin(), svec.cend());
+
+    quick_sort(svec.begin(), svec.end());
+    print_items(svec.cbegin(), svec.cend());
+  }
+#+end_src
+
+#+RESULTS[9dce1bd0da0b70d024e2bf881b382d1251a0b4d9]:
+: [3, 1, 2, 5, 4]
+: [1, 2, 3, 4, 5]
+: [hello, world, devil, C++]
+: [C++, devil, hello, world]
+
+对于没有定义 =<= 运算符的对象或者希望自定义比较操作时可以向排序函数中传入自定义的
+比较函数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <string>
+  #include <vector>
+
+  template<typename Iter>
+  void print_items(Iter __beg, Iter __end)
+  {
+    if (__beg == __end)
+      return;
+
+    std::cout << "[";
+    while (__beg + 1 < __end) {
+      std::cout << *__beg++ << ", ";
+    }
+    std::cout << *__beg << "]" << std::endl;
+  }
+
+  // 快速排序内部实现方法
+  template<typename Iter, typename Cmpr>
+  Iter quick_sort_helper(Iter __beg, Iter __end, Cmpr __cmpr)
+  {
+    // 将第一个元素记录并作为基准值
+    typename Iter::value_type pivot = *__beg;
+    // 将尾后指针向前移动，指向最后一个元素
+    --__end;
+    // 当左指针不等于右指针时
+    while (__beg < __end) {
+      // 从右侧找到第一个比基准值小的元素，并与基准位置互换
+      while (!(__cmpr(*__end, pivot)) && __beg < __end) --__end;
+      ,*__beg = *__end;
+      // 从左侧找到第一个比基准值中的元素，并与基准位置互换
+      while (!(__cmpr(pivot, *__beg)) && __beg < __end) ++__beg;
+      ,*__end = *__beg;
+    }
+    // 恢复基准位置的值
+    ,*__beg = pivot;
+    return __beg;
+  }
+
+  // 快速排序
+  template<typename Iter, typename Cmpr>
+  void quick_sort(Iter __beg, Iter __end, Cmpr __cmpr)
+  {
+    // 此处 __end 是尾后指针，当只有一个元素时无无需排序，直接跳出
+    if (__beg + 1 < __end) {
+      // 获取基准位置迭代器
+      Iter mid = quick_sort_helper(__beg, __end, __cmpr);
+      // 对基准位置前面的元素进行排序
+      quick_sort(__beg, mid, __cmpr);
+      // 对基准位置后面的元素进行排序
+      quick_sort(mid + 1, __end, __cmpr);
+    }
+  }
+
+  struct Point {
+    friend std::ostream& operator<<(std::ostream& os, Point const& p) {
+      return std::cout << "Point(" << p.x << ", " << p.y << ")";
+    }
+    // 默认构造
+    Point(double __x = 0.0, double __y = 0.0) : x(__x), y(__y) { }
+    // 拷贝构造
+    Point(Point const& p) {
+      x = p.x;
+      y = p.y;
+    }
+    // 赋值
+    Point& operator=(Point const& p) {
+      x = p.x;
+      y = p.y;
+      return *this;
+    }
+    double x = 0.0;
+    double y = 0.0;
+  };
+
+  int main()
+  {
+    // 对 std::vector<Point> 进行排序
+    std::vector<Point> pvec{{3, 2}, {1, 2}, {2, 4}, {1, 0}};
+    print_items(pvec.cbegin(), pvec.cend());
+    // 比较二维平面上的点到原点的距离
+    quick_sort(pvec.begin(), pvec.end(), [](Point const& a, Point const& b) {
+      return a.x * a.x + a.y * a.y < b.x * b.x + b.y * b.y;
+    });
+    print_items(pvec.cbegin(), pvec.cend());
+  }
+#+end_src
+
+#+RESULTS[ac54249a2f5853a5785306dc8d712b1d76de699e]:
+: [Point(3, 2), Point(1, 2), Point(2, 4), Point(1, 0)]
+: [Point(1, 0), Point(1, 2), Point(3, 2), Point(2, 4)]

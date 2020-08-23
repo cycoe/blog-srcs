@@ -1,0 +1,44 @@
+#+TITLE: Gnuplot 绘图教程合集
+#+DATE: <2020-05-15 Fri 11:53>
+#+TAGS: Gnuplot, Plot
+#+LAYOUT: post
+#+CATEGORIES: Gnuplot
+
+#+PROPERTY: header-args:gnuplot :exports both
+
+#+begin_quote
+[[https://http://gnuplot.info/][Gnuplot]] is a portable command-line driven graphing utility for Linux, OS/2, MS
+Windows, OSX, VMS, and many other platforms. The source code is copyrighted but
+freely distributed (i.e., you don't have to pay for it). It was originally
+created to allow scientists and students to visualize mathematical functions and
+data interactively, but has grown to support many non-interactive uses such as
+web scripting. It is also used as a plotting engine by third-party applications
+like Octave. Gnuplot has been supported and under active development since 1986.
+#+end_quote
+
+我等科研狗选择的图形界面绘图工具一般是 Origin，无奈 Origin 并不支持 Linux，另一
+方面希望选择一款命令行下的绘图工具可以更好地整合至我的工作流中。Linux 中我等凡人
+能够驾驭的绘图工具主要是 Gnuplot 和 Matplotlib，Matplotlib 是 Python 的一个第三
+方模块，可生成印制质量的数据图。但是 Gnuplot 的官方 Demo 一下就让我心动了，
+Gnuplot的默认配色也太好看了，清新淡雅。因此花了几日研究了一下 Gnuplot 的语法，看
+了网上一些博客。还没来得及看官方 1000 多页的手册，先下了一本叫 /Gnuplot Cookbook/
+的书学习了一下，本教程中的内容与代码也全部来自于此书，并对其中一些不合理以及过时
+的地方进行了一些修改，我使用的 Gnuplot 版本为 =Version 5.2 patchlevel 8= 。另提一
+句，Gnuplot 虽然名字中带有 =Gnu= 但并不是 =GNU= 项目的一部分，这也是为什么没有全部大
+写的原因。
+
+#+HTML: <!-- more -->
+
+[[file:Gnuplot-绘图第一弹-二维数据绘图.org][Gnuplot 绘图第一弹-二维数据绘图]]
+
+[[file:Gnuplot-绘图第二弹-标签与图例.org][Gnuplot 绘图第二弹-标签与图例]]
+
+[[file:Gnuplot-绘图第三弹-颜色与样式.org][Gnuplot 绘图第三弹-颜色与样式]]
+
+[[file:Gnuplot-绘图第四弹-调整刻度.org][Gnuplot 绘图第四弹-调整刻度]]
+
+[[file:Gnuplot-绘图第五弹-多子图绘制.org][Gnuplot 绘图第五弹-多子图绘制]]
+
+[[file:Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理.org][Gnuplot 绘图第七弹-Gnuplot 式编程与数据处理]]
+
+[[file:Gnuplot-绘图第八弹-3D-绘图.org][Gnuplot 绘图第八弹-3D 绘图]]

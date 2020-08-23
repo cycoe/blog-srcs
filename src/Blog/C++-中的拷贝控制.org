@@ -1,0 +1,211 @@
+#+TITLE: C++ 中的拷贝控制
+#+DATE: <2020-07-09 Thu 15:07>
+#+LAYOUT: post
+#+TAGS: C++
+#+CATEGORIES: C++
+
+#+HTML: <!-- more -->
+
+一般来说进行资源管理的类都需要对拷贝过程进行控制，另外在类需要进行某些记录操作时
+也需要进行拷贝控制。以博客生成为例，一篇博客可能具有多个标签，而一个标签下面也会
+管理多篇博客。
+
+** =Tag= 类的实现
+
+#+NAME: Tag-class
+#+begin_src C++ :file-name foo.cc :eval no
+  #include <set>
+  #include <string>
+  #include <iostream>
+
+  class Blog;
+
+  class Tag {
+    friend class Blog;
+    friend std::ostream& operator<<(std::ostream& os, Tag const& tag);
+  public:
+    Tag(std::string const& __name = "") : name(__name) { }
+    void add(Blog*);
+    void remove(Blog*);
+    std::string const& get_name() { return name; }
+  private:
+    std::string name;       // 标签的名字
+    std::set<Blog*> blogs;  // 属于此标签的 Blog
+  };
+
+  void Tag::add(Blog* blog)
+  {
+    blogs.insert(blog);
+  }
+
+  void Tag::remove(Blog* blog)
+  {
+    blogs.erase(blog);
+  }
+#+end_src
+
+** =Blog= 类的实现
+
+#+NAME: Blog-class
+#+begin_src C++ :file-name foo.cc :eval no
+  #include <iostream>
+  #include <string>
+  #include <set>
+
+  class Tag;
+
+  class Blog {
+    friend class Tag;
+    friend std::ostream& operator<<(std::ostream& os, Blog const& blog);
+  public:
+    Blog(std::string const& __content = "") : content(__content) { }
+    // 拷贝控制成员函数
+    Blog(Blog const&);             // 拷贝构造
+    Blog& operator=(Blog const&);  // 拷贝赋值
+    ~Blog();                       // 析构
+    // 从给定的 Tag 中添加或删除本 Blog
+    void add_to(Tag&);
+    void remove_from(Tag&);
+    std::string const& get_content() { return content; }
+  private:
+    std::string content;           // Blog 的内容
+    std::set<Tag*> tags;           // 本 Blog 的 tags，被隐式初始化为空集合
+    void add_to_tags(Blog const&); // 将本 Blog 添加到参数 Blog 的所有 Tag 中
+    void remove_from_tags();       // 从 tags 中的每个 Tag 中删除本 Blog
+  };
+
+  void Blog::add_to(Tag& tag)
+  {
+    tags.insert(&tag);
+    tag.add(this);
+  }
+
+  void Blog::remove_from(Tag& tag)
+  {
+    tags.erase(&tag);
+    tag.remove(this);
+  }
+
+  void Blog::add_to_tags(Blog const& blog)
+  {
+    for (auto tag : blog.tags)
+      tag->add(this);
+  }
+
+  void Blog::remove_from_tags()
+  {
+    for (auto tag : tags)
+      tag->remove(this);
+  }
+
+  Blog::Blog(Blog const& blog) : content(blog.content), tags(blog.tags)
+  {
+    add_to_tags(blog);
+  }
+
+  Blog::~Blog()
+  {
+    remove_from_tags();
+  }
+
+  Blog& Blog::operator=(Blog const& blog)
+  {
+    // 先将本 Blog 从原来的 tags 中删除，再加入到 blog 参数的 tags 列表中，从而处
+    // 理自赋值情况
+    remove_from_tags();
+    content = blog.content;
+    tags = blog.tags;
+    add_to_tags(blog);
+    return *this;
+  }
+#+end_src
+
+** 测试我们的 =Blog= 和 =Tag= 类
+
+#+begin_src C++ :file-name foo.cc :noweb eval :flags -lfmt
+  #include <fmt/core.h>
+
+  <<Tag-class>>
+  <<Blog-class>>
+
+  std::ostream& operator<<(std::ostream& os, Tag const& tag)
+  {
+    os << fmt::format("Tag({0}) has {1} blogs:\n", tag.name, tag.blogs.size());
+    std::set<Blog*>::size_type index = 0;
+    std::set<Blog*>::const_iterator iter = tag.blogs.cbegin();
+    for (; index < tag.blogs.size(); ++index, ++iter) {
+      os << fmt::format("[{0}] ", index + 1) << (*iter)->get_content() << std::endl;
+    }
+    return os;
+  }
+
+  std::ostream& operator<<(std::ostream& os, Blog const& blog)
+  {
+    os << fmt::format("Blog({0}) has {1} tags: ", blog.content, blog.tags.size());
+    std::set<Tag*>::size_type index = 0;
+    std::set<Tag*>::const_iterator iter = blog.tags.cbegin();
+    for (; index < blog.tags.size() - 1; ++index, ++iter)
+      os << (*iter)->get_name() << ", ";
+    return os << (*iter)->get_name() << "." << std::endl;
+  }
+
+  int main()
+  {
+    Tag python("Python"), cpp("C++"), program("Program languages");
+
+    Blog b1("Python is elegant.");
+    Blog b2("Python is simple.");
+    Blog b3("C++ is evil.");
+    b1.add_to(python);
+    b2.add_to(python);
+    b3.add_to(cpp);
+    b1.add_to(program);
+    b2.add_to(program);
+    b3.add_to(program);
+
+    std::cout << python << std::endl;
+    std::cout << cpp << std::endl;
+    std::cout << program << std::endl;
+
+    // 从 b3 拷贝构造 b4
+    Blog b4(b3);
+    std::cout << cpp << std::endl;
+    std::cout << b4 << std::endl;
+
+    b4 = b1;
+    std::cout << cpp << std::endl;
+    std::cout << python << std::endl;
+    std::cout << b4 << std::endl;
+  }
+#+end_src
+
+#+RESULTS[3489448fa7ac0d19b2ff4339860bd1ca462830e9]:
+#+begin_example
+Tag(Python) has 2 blogs:
+[1] Python is elegant.
+[2] Python is simple.
+
+Tag(C++) has 1 blogs:
+[1] C++ is evil.
+
+Tag(Program languages) has 3 blogs:
+[1] Python is elegant.
+[2] Python is simple.
+[3] C++ is evil.
+
+Tag(C++) has 2 blogs:
+[1] C++ is evil.
+[2] C++ is evil.
+
+Blog(C++ is evil.) has 2 tags: C++, Program languages.
+
+Tag(C++) has 1 blogs:
+[1] C++ is evil.
+
+Tag(Python) has 3 blogs:
+[1] Python is elegant.
+[2] Python is simple.
+[3] Python is elegant.
+
+Blog(Python is elegant.) has 2 tags: Python, Program languages.
+#+end_example

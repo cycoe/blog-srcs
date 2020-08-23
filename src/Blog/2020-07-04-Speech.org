@@ -1,0 +1,18 @@
+#+TITLE: 2020-07-04 Prepared Speech
+#+DATE: <2020-07-03 Fri 22:20>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+#+HTML: <!-- more -->
+
+** TODO <2020-07-04 Sat> Prepared Speech
+DEADLINE: <2020-07-04 Sat 12:00> SCHEDULED: <2020-07-03 Fri 22:30>
+*** TODO Topic
+:PROPERTIES:
+:Effort:   15min
+:END:
+*** TODO Draft
+:PROPERTIES:
+:Effort:   2h
+:END:

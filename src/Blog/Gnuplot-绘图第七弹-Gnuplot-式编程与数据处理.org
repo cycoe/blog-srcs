@@ -1,0 +1,65 @@
+#+TITLE: Gnuplot 绘图第七弹-Gnuplot 式编程与数据处理
+#+DATE: <2020-05-07 Thu 20:48>
+#+TAGS: Gnuplot, Plot
+#+LAYOUT: post
+#+CATEGORIES: Gnuplot
+
+#+PROPERTY: header-args:gnuplot :exports both
+
+目前为此，所有绘图相关的操作都已经介绍完毕，接下来来点高级的。
+
+#+HTML: <!-- more -->
+
+** =for= 循环
+#+begin_src gnuplot :file ./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-for.png
+  set term pngcairo mono dashed enhanced
+  set rmargin at screen .8
+  set key right center at screen 1,.6
+  plot [0:3] for [n=1:10:2] besj0(n*x) title "J_0(".n."x)"
+#+end_src
+
+#+RESULTS:
+[[file:./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-for.png]]
+
+** =a:b:c= 三目运算符
+#+begin_src gnuplot :file ./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-multi-section.png
+  set samples 2000
+  f(x) = x < 0? sin(x) : NaN
+  g(x) = x >= 0? exp(-x/5.)*sin(x) : NaN
+  plot [-20:20] f(x), g(x)
+#+end_src
+
+#+RESULTS:
+[[file:./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-multi-section.png]]
+
+** 平滑曲线
+#+begin_src gnuplot :file ./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-smooth.png
+  set samples 500
+  set key right top box
+  set xrange [0:2*pi]
+
+  set table '~/random.dat'
+  plot sin(x) + 0.5 * rand(0)
+  unset table
+
+  plot '~/random.dat' w l lw 0.5 title "Original",\
+       '' smooth bezier lw 4 title "Bezier Smoothed"
+#+end_src
+
+#+RESULTS:
+[[file:./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-smooth.png]]
+
+** 拟合曲线
+#+begin_src gnuplot :file ./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-fit.png
+  set key right top box
+  set xrange [0:2*pi]
+
+  f(x) = a * sin(b * x) + c
+  fit f(x) '~/random.dat' via a, b, c
+
+  plot '~/random.dat' w l lw 0.5 title "Original",\
+       f(x) w l lw 4 title "Fit by Gnuplot"
+#+end_src
+
+#+RESULTS:
+[[file:./Gnuplot-绘图第七弹-Gnuplot-式编程与数据处理/c7-fit.png]]

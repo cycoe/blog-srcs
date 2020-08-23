@@ -1,0 +1,1007 @@
+#+TITLE: Campus Toast Master Club Meeting
+#+DATE: <2020-06-06 Sat 10:50>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+#+LATEX_HEADER: \usepackage{config}
+
+* Campus Toast Master Club Meeting
+SCHEDULED: <2019-12-14 Sat +1w>
+This file records my preparation before the regular meeting and my performance
+during the meeting.
+** DONE <2019-11-16 Sat> [2/2] Ice Break Speech
+DEADLINE: <2019-11-10 Sun> SCHEDULED: <2019-11-10 Sun>
+Introduce myself within 6-7 wins. Attachment is [[file:2019-11-10-Ice Break Speech/Ice Break Speech.pptx][ppt]]
+*** DONE [5/5] processing
+**** DONE Determined a theme (a point)
+- Topic: **When I meet with Open Source.** Tell a story between Open
+  Source and I.
+- Purpose: Make a deep impression with me and Open Source.
+
+**** DONE Generate a general structure (TOC)
+    - Meet with Open Source (Ubuntu)
+      + fearness
+      + don't know how to use it, feel helpless
+
+    - Attempt to search information on the Internet, try using it.
+      + Bing and Google is a good searching tool
+      + Reading wiki and manual became normal
+
+    - feel free to use it as a daily-use system, and can modify the
+      source code to make it more suitable for me.
+      + When you feel something is difficult, that's because you don't
+        use it enough.
+      + First contact to GitHub, a international programmer community.
+
+    - Interested in write my own software.
+      + Some small tools.
+      + Dynamic window manager.
+
+**** DONE Fill up each part
+**** DONE Check logic and Completeness
+**** DONE Practice to fluently speech
+*** DONE draft
+Good evening Campus members and guests, my name is Cycoe. It is the
+4th time for me to participate in Campus Meeting. I think you all know
+my hometown, my hobbies and etc. So today, I will share the story
+between Open Source and me.
+
+The first Open Source software I contacted is GNU/Linux, and Ubuntu is
+the first Linux distribution I have used. When I heard that my mobile
+phone can flash Ubuntu, I began to search more information about this
+system. After I read the introduction of the system, I thought Wow
+it's cool, it's so different from Android and Windows. So I installed
+it on my laptop without any troubles. True, installation was easy, but
+use was so difficult. There was no Wechat, no QQ, no LOL, however I
+wanted to play games! Worst of all, I didn't even know how to get
+software. At that point, I felt helpless.
+
+Luckily, I had a Firefox default installed. Now that I couldn't switch
+back to Windows, I would search some guides for use, and had a try. At
+that time, I used Baidu searching engine. But as you know, Baidu puts
+many ads before the useful items, so that I had to pick out the useful
+one in millions of items. Gradually I knew how to fetch software
+packages from official and third-part repositories[rɪˈpɒzətri], and
+how to use simple commands like `sed`, `awk` and `find`, to deal with
+some simple tasks. Reading wiki and manuals is the most useful and
+reliable way to figure out the functions and usages of software, but
+reading manual is so painful.
+
+With being skilled in installing Linux and software under Linux
+platform, I read more and more articles like /The best Music Player
+under Linux/, /Top 10 Linux Software/ and so on. I realized that there
+are also many good-designed software under Linux, so I could do the
+same thing under Linux as under Windows with the different software.
+The best website to discover good software is GitHub, as known as the
+largest programmer dating site in the world. Here, you can see what
+the other programmers are coding, and what projects are in
+trend[trend]. When I met problem, I would turn to GitHub for help.
+Then I would find an almost out-of-box solution just needs several
+configurations. That moment, I tasted the power of Open Source. All
+your demands may have been realized by pioneers[ˌpaɪəˈnɪəz]. I use
+FireFox to surf the Internet, use GIMP to modify my photos, use
+Blender to build models, and use GPodder to listen to podcasts.
+
+Open source doesn't just mean getting code for free, but also sharing,
+cooperating and communicating with others. After the stage When I
+downloaded others' source code and did some modifications, I began to
+write my own tools. On the one hand I could satisfy my own needs, on
+the other hand I could share it to others. Sharing always makes me
+happy. In order to monitor the remain amount of lectures in our
+educational administration system, I wrote a tool to notify me when
+new lectures were released. Sometimes I was not satisfied with the
+existing desktop environment, so I switched to the Open Source Dynamic
+Window Manager, and did many enhancements on the source code to cater
+to my taste, like adding a function to switch position of windows, or
+change the default behavior of windows.
+
+So, this is the story between Open Source and me, I feel lucky to hug
+with Open Source, and share the story to you.
+
+Thank you!
+
+** DONE <2019-11-23 Sat> [3/3] Chinese speech contest
+DEADLINE: <2019-11-23 Sat> SCHEDULED: <2019-11-23 Sat>
+*** DONE 题目
+光棍与购物狂欢
+*** DONE 主旨与架构
+1. 客观讲述双十一从光棍节到购物狂欢的转变，以及其代表的含义
+2. 自己对于这种转变的认识
+3. 分享与之相关的趣事
+
+*** DONE 演讲稿
+**** 开场：调动气氛
+虽然一年一度的双十一刚刚过去，但是你们一定还对爆舱的快递印象深刻，一定
+记得等待快递的那种焦急。可能你的上一个快递刚刚拿到手还没捂热，你就收到
+了下一个快递的短信。那一刻，你望着长长的队伍，心想：快递小哥要是我男朋
+友该多好。括弧，此条男生同样适用。
+
+**** 讲述转变
+众所周知，双十一是我国传统的光棍节，（咳），众所周知，双十一是我国传统
+的购物狂欢节。在我还在上初中的时候，当时的校园里由于受到葬爱家族文化和
+狂少家族文化的共同薰陶，同学们都开始流行过光棍节。一到每年的 11 月 11
+号，就会有同学问我说：“你脱单了没？”那一刻，我感受到了灵魂的拷问，感
+到无助且悲伤，甚至有些羞愧地低下了头。“脱单，脱单，说的轻松，我要是脱
+了单现在你还能在这看见我？”好在马云爸爸弄了这么个购物狂欢节，让双十一
+这天变得和谐了许多。现在一到双十一，别人都是问我，你下单了没？
+
+**** 光棍节与购物狂欢节
+不知道你们有没有想过，为什么双十一这天被定为了淘宝的购物狂欢节？有人可
+能会说，是因为年底货卖不完了，商家想要通过这种方式把存货甩卖出去。也有
+人可能会想，双十一双十一，情侣都出去过节了，马云爸爸是想给我们单身狗留
+一片净土啊。脱单是不可能脱单的，只能逛逛淘宝，买买东西，勉强维持生活这
+样子，不是很贴心吗？但现实总是残酷的，情侣们晚上出去吃完大餐，看完电影，
+零点还要准时参加抢购大军。作为单身狗，双拳难敌别人四手你说气不气？看来
+双十一不论是光棍节还是购物狂欢节，都对单身狗充满了恶意。所以这个世界，
+还是需要给单身狗更多的温暖。
+
+**** 脱单还是购物
+一到每年的双十一这天，脱单和购物就成了我人生的两件头等大事。是“先脱单
+还是先购物”就成了与“是先有鸡还是先有蛋”同等重要的哲学问题，时刻萦绕
+在我的心头。为此，我还特意请教了相关有经验人士。
+
+脱单派人士认为，脱单乃精神层面的提升，而购物只是物质层面的拥有。没有谈
+过恋爱的男生只会去买那种“让女生感动到哭的 5 种礼物”，脱过单的男生能
+够分得清枫叶红、豆沙红、番茄红、铁锈红，分得清霜、水、乳、粉底、眼影、
+腮红、高光，脱过单的女生能够分得清红轴、茶轴、黑轴、青轴，薄膜、机械、
+电容，买起东西来更是如有神助。
+
+购物派人士则认为，一年那么多节日哪天不可以脱单？不说情人节、七夕节，甚
+至连春节、元宵节、端午节、中秋节都被过成了情侣秀恩爱的节日。对象嘛随时
+都可以找，双十一优惠一年一次错过可就是真错过咯。
+
+那有没有能够脱单购物两不误的成功人士呢？当然有，比如说我。我的女朋友邱
+大帅，是个勤俭持家的好姑娘。前几天双十一，她拿着刀大喊着要剁手，我赶紧
+安慰她说：“亲爱的，钱没了可以再挣，手没了可就真没了，你放心买我掏
+钱！”说到这，她才满意地把刀从我手上拿开。
+
+**** 结尾：
+从古至今，一年当中有太多的日子被我们赋予了各种各样的意义。双十一这天脱
+不脱单其实不是那么重要，买不买东西其实也不重要，重要的是与你爱的人和爱
+你的人共同度过。想到这，我关上了淘宝，踏上了回家的旅程。
+** DONE <2019-12-14 Sat> [2/2] Candy master
+CLOSED: [2019-12-12 Thu 11:25] DEADLINE: <2019-11-30 Sat> SCHEDULED: <2019-11-30 Sat>
+*** DONE Joke
+CLOSED: [2019-12-13 Fri 13:16]
+#+LATEX:\lettrine[lines=2]{L}{ong}
+long ago, there was a dark cave in the pitchwood forest, and the
+kingdom of bats settled in the cave. One day, the old king of bat
+died. So, bats had to voted for a new king. They decided to hold a
+contest to choose the cruelest bat as thier new king.
+
+Contest began, the first bat flew out and came back after 15 minutes.
+"Do you see the cows on the grass?" The bat asked. All audiences
+answered, "Yes!" "I have sucked up a crowd of cows." "Wow! You're
+cruel /[\textprimstress kru\textlengthmark \textschwa l]/!"
+
+Then it's the second bat's turn. The bat flew out and came back in 5
+minutes with blood on his mouth. "Do you see the people in the
+village?" The competitor asked. "Yes, I can!" All audiences said. "I
+have sucked up a village of people." "Wow! You're so fierce
+/[f\i\textschwa s]/!"
+
+Then it turned to the last competitor. The last bat flew out and came
+back just in 1 minute with the whole face covered by blood. "He must
+be the new king!" All bats whispered to each other. "Can you see the
+huge rock out of the cave?" "Yes, I can!" All bats were ready to
+congratulate the new king. The new king said, "But I didn't."
+
+*** DONE Questions
+**** Question about joke
+    - What animal did the first bat attack? (cow)
+**** For guests only
+    - Who is the Toast Master today? (Watson)
+    - What is the spirit of Toast Master Club? (Passion, Profession,
+      Sharing and Growth)
+    - Which time is this Toast Master regular meeting? (266th)
+**** For all members
+    - Four tabus in Toast Master Club? (Policy, Sex, Race and
+      Religion)
+    - How many pathways in our pathway system? (11)
+    - What is the number of our Campus Toast Master Club? (1596973)
+    - How many levels in our pathway system? (5)
+** DONE <2019-12-21 Sat> [5/5] Table topic master
+CLOSED: [2019-12-14 Sat 17:59] SCHEDULED: <2019-12-11 Wed> DEADLINE: <2019-12-14 Sat>
+*** DONE Topic: Different walks of life (各行各业)
+*** DONE [2/2] processing
+CLOSED: [2019-12-14 Sat 17:59]
+**** DONE discusss the topic with TM
+**** DONE [9/9] prepare 10 questions according to the topic
+CLOSED: [2019-12-14 Sat 17:59]
+1. [X] Talk about your dream job
+2. [X] Image it that you were a famous singer, how about your daily life?
+3. [X] If you didn't need to take earning a living into account, which job would
+   you engage in?
+4. [X] Every profession produces its own topmost master. As a master/doctor of
+   your current majority, how can you become a topmost master in your field?
+5. [X] What kind of jobs do you want your spouse doing when you get married?
+6. [X] Suppose a travel agency provided you with a post of tour guide. What would
+   you do for being a qualified guide?
+7. [X] In 2050, people will do different jobs from those they do now. So talk
+   about your imagination of jobs in the future.
+8. [X] After you have a child, how do you explain the importance of different
+   walks of life?
+9. [X] One job in a lifetime or doing sort of jobs, which on do you prefer?
+*** DONE opening draft
+CLOSED: [2019-12-14 Sat 16:58]
+Good evening members! Today, I am the table topic master, Cycoe. In this
+meeting, our topic is /Diffrent walks of life/. According to the topic, I prepared
+several questions, easy or a little difficult. In this section, I will invite
+some members to the stage and choose a question to deliver a improvised speech.
+For each challenger, you will have 2 minutes totally to organize and express.
+These figures don't stand for the content, and nor are arranged by difficulty.
+
+Let's begin! So, who want to be the 1st.
+*** DONE pre-draft of questions
+CLOSED: [2019-12-14 Sat 16:58]
+*** DONE post-draft of questions
+CLOSED: [2019-12-14 Sat 16:58]
+** DONE <2019-12-28 Sat> [2/2] Campaign for VPPR
+CLOSED: [2019-12-27 Fri 12:07]
+*** DONE Introduce the functions of VPPR
+CLOSED: [2019-12-27 Fri 12:06]
+Good evening, club members and guests! I'm the candidate of VPPR, Cycoe. As you
+know, VPPR denotes /Vice President Public Relations/, committed to introduce the
+existence and benefits of the club to the local community and media. And spread
+the influence through Internet, meanwhile, protect the club image.
+*** DONE My advantages to take the role of VPPR
+CLOSED: [2019-12-27 Fri 12:07]
+These several sentences described the overall figure of the VPPR role. After
+reading this description, I began to think about, what are my advantages to take
+the VPPR role? Maybe, I benefit from my interest of design and my enthusiasm to
+our club. In other words, I'm long for the skills of many design toolkits.
+Wherever along the way, I have got some experience of photo editing, poster
+designing and blackboard handwriting. Then I have enough enthusiasm to serve our
+club with my skills. If there is a chance that I can take the role of VPPR, I
+will try my best in the regular meeting, and convey the spirits to the
+community.
+** DONE <2020-02-22 Sat> [2/2] Speech
+CLOSED: [2020-02-22 Sat 22:47] DEADLINE: <2020-01-11 Sat> SCHEDULED: <2020-01-08 Wed>
+*** DONE Topic
+CLOSED: [2020-01-08 Wed 15:21]
+Everything flows
+*** DONE Draft
+CLOSED: [2020-02-22 Sat 22:50]
+The ancient Greek philosopher[哲学家] Heraclitus, the pioneer of Epistemology[认
+识论], said that, Panta Rhei. It means everything flows. There is an equivalent
+expression, No man ever steps in the same river twice, and the mountain you see
+now is different from that you saw yesterday. It sounds a little trick that you
+can say, the mountain is just in the different time-space. But I can tell you
+that, in physical aspect, the mountain exactly changed. Today, I will introduce
+you to rheology[流变学].
+
+Rheology is an interesting subject, and it was founded in 1920s, while scholars
+found that classical elasticity[弹性], plasticity[塑性] and fluid theory could
+not describe the complicated properties of rubber, plastics and rocks. Earlier,
+English physicists Maxwell and Kelvin had discovered the tight connection
+between materials and time.
+
+There are two typical patterns that materials perform when they are effected by
+external forces. The first one is elasticity, like rubber bands. Rubber bands
+will store the energy when you stretch it, and recover after forces offloading.
+The second one is plasticity,like water.Water will transform the work into
+internal energy. If you pour a basin of water on the ground,it will never
+reshape into a basin again. All these things are obvious, but do you think about
+whether it must be absolute.Answer is No. elastics can perform plasticity, and
+plastics can also perform elasticity.It depends on the time scale in which you
+obverse. With enough long time ,materials will mainly perform plasticity, and
+with short time they will mainly perform elasticity. An excellent example ,
+glass is a so-called super-cooling liquid[过冷液体] instead of a simple solid.
+If you obverse the transformation of glass over a century-wide scale, you could
+see the glass flows like the honey.
+
+What does it mean? It means that it's almost meaningless to define the world
+with a static snapshot. World performs different ways with different time scales
+and spatial scales. Macrobian[长寿者] living over thousands of years go through
+a different world from that short-life devils dying in an instant do. We are
+human beings, we experience an unique world.
+** DONE <2020-02-29 Sat> Grammarian
+CLOSED: [2020-02-29 Sat 11:03]
+Practical
+[[file:2020-02-29-Grammarian/Practical.png]]
+** DONE <2020-03-07 Sat> Prepared Speech Evaluator
+CLOSED: [2020-03-07 Sat 08:21]
+** DONE <2020-03-14 Sat> Ah-counter
+CLOSED: [2020-03-14 Sat 22:54]
+[[file:Official Functions/Official Functions.org]]
+*** DONE Records
+CLOSED: [2020-03-14 Sat 21:00]
+#+TBLNAME: Ah-counting
+|---------+----+----+----+-----+------+-----+----+------+---------+-------+-------|
+| Name    | Ah | Um | Er | And | Well | But | So | Like | Repeats | Other | Total |
+|---------+----+----+----+-----+------+-----+----+------+---------+-------+-------|
+| Lucy    |  0 |  1 |  0 |   2 |    0 |   0 |  0 |    0 |       0 |     0 |     3 |
+| Watson  |  0 |  0 |  0 |   0 |    0 |   0 |  0 |    0 |       0 |     0 |     0 |
+| Amy     |  0 |  0 |  2 |   1 |    0 |   0 |  0 |    0 |       8 |     0 |    11 |
+| Rob     |  0 |  8 |  5 |   0 |    0 |   0 |  0 |    0 |       0 |     1 |    14 |
+| Grace   |  0 |  0 |  2 |   4 |    0 |   0 |  0 |    0 |       0 |     0 |     6 |
+| Alisa   |  0 |  2 |  2 |   0 |    0 |   0 |  0 |    0 |       3 |     0 |     7 |
+| Michael |  0 |  3 |  7 |   0 |    0 |   0 |  0 |    0 |       0 |     0 |    10 |
+| Rita    |  0 |  1 |  2 |   0 |    0 |   0 |  0 |    0 |       5 |     0 |     8 |
+| Rubby   |  0 |  2 |  4 |   0 |    0 |   0 |  0 |    0 |       0 |     0 |     6 |
+|---------+----+----+----+-----+------+-----+----+------+---------+-------+-------|
+#+TBLFM: $12=vsum($2..$11)
+
+#+begin_src gnuplot :file ./Regular Meeting Roles/2020-03-14-ah-counting.png :var data=Ah-counting
+  firstcol=2
+  cumulated(i)=((i>firstcol)?column(i)+cumulated(i-1):(i==firstcol)?column(i):1/0)
+
+  # 自动将表头设为图例
+  set key autotitle columnhead left
+  set style fill solid 1 border lt -1
+  set style data histograms
+  set style histogram rowstacked
+  set xtics font '-Bold'
+
+  # 将第一列设为 x 轴标签
+  plot for [i=2:11] data using (column(i)):xticlabels(1)
+#+end_src
+
+#+RESULTS:
+[[file:./Regular Meeting Roles/2020-03-14-ah-counting.png]]
+
+** DONE <2020-03-21 Sat> [6/6] Table topic master
+CLOSED: [2020-03-21 Sat 18:44] DEADLINE: <2020-03-19 Thu 20:00> SCHEDULED: <2020-03-17 Tue 09:00>
+*** DONE Topic: When not studying
+CLOSED: [2020-03-19 Thu 11:18]
+*** DONE [3/3] processing
+CLOSED: [2020-03-20 Fri 19:59]
+**** DONE discusss the topic with TM
+CLOSED: [2020-03-19 Thu 11:18]
+:PROPERTIES:
+:Effort:   15min
+:END:
+**** DONE [9/9] prepare 10 questions according to the topic
+CLOSED: [2020-03-20 Fri 19:09]
+:PROPERTIES:
+:Effort:   1h
+:END:
+:LOGBOOK:
+CLOCK: [2020-03-20 Fri 18:44]--[2020-03-20 Fri 19:09] =>  0:25
+CLOCK: [2020-03-20 Fri 17:04]--[2020-03-20 Fri 17:54] =>  0:50
+:END:
+- [X] What activity do you prefer when you are too tired to studying?
+- [X] Corona Virus outbreak has caused a vacation extension. So how do you
+  arrange your studying time if there is another month stay at home?
+- [X] In the last past month, how did you arrange your time for studying?
+- [X] A skill that can make you happy versus a skill that can make more money,
+  which one do you prefer?
+- [X] Share an experience that you solved a daily-life problem with the
+  knowledge of your major.
+- [X] If a girl strike up a conversation (搭讪) with you when you are in
+  studying in library, how will things go on?
+- [X] Share your experience about how to loaf on your work (摸鱼) in laboratory.
+- [X] When you were struggling in writing paper, some situation knocked in. You
+  said, I'd rather write my paper. So, imagine what situation happened.
+- [X] After experience a long term of study/work at home, how can you combine
+  studying with your daily life? Or separate studying from daily life?
+**** DONE Make a PPT
+CLOSED: [2020-03-20 Fri 19:59]
+:PROPERTIES:
+:Effort:   1h
+:END:
+:LOGBOOK:
+CLOCK: [2020-03-20 Fri 19:15]--[2020-03-20 Fri 19:59] =>  0:44
+:END:
+*** DONE opening draft
+CLOSED: [2020-03-21 Sat 18:44]
+:PROPERTIES:
+:Effort:   30min
+:END:
+Good evening members! Today, I am the table topic master, Cycoe. In this
+meeting, our topic is /When NOT Studying/. According to the topic, I prepared
+several questions, easy or a little difficult. In this section, I will invite
+some volunteers to the stage and choose a question to deliver a improvised
+speech. For each challenger, you will have 2 minutes totally to organize and
+express. These figures don't stand for the content, and nor are arranged by
+difficulty.
+
+Let's begin! So, who want to be the 1st.
+*** DONE pre-draft of questions
+CLOSED: [2020-03-21 Sat 18:44]
+:PROPERTIES:
+:Effort:   30min
+:END:
+*** DONE post-draft of questions
+CLOSED: [2020-03-21 Sat 18:44]
+:PROPERTIES:
+:Effort:   30min
+:END:
+*** DONE Order records
+CLOSED: [2020-03-21 Sat 21:33]
+| Order | Player Name | Question No. |
+|-------+-------------+--------------|
+|     1 | Nate        |            3 |
+|     2 | Lucy        |            5 |
+|     3 | 阿华        |            7 |
+|     4 | Amy         |            4 |
+|     5 | Alisa       |            2 |
+|     6 | Kobe        |            9 |
+|     7 | Rita        |            1 |
+|     8 | Jocelyn     |            8 |
+|     9 | Grace       |            6 |
+** DONE <2020-04-01 Wed> [3/3] 准备九周年活动
+CLOSED: [2020-04-01 Wed 22:29] DEADLINE: <2020-03-31 Tue 12:00> SCHEDULED: <2020-03-25 Wed 10:00>
+*** DONE 准备海报
+CLOSED: [2020-03-26 Thu 20:34] DEADLINE: <2020-03-28 Sat 12:00> SCHEDULED: <2020-03-25 Wed 10:00>
+:PROPERTIES:
+:Effort:   2h
+:END:
+:LOGBOOK:
+CLOCK: [2020-03-26 Thu 19:26]--[2020-03-26 Thu 20:34] =>  1:08
+CLOCK: [2020-03-26 Thu 16:29]--[2020-03-26 Thu 18:03] =>  1:34
+CLOCK: [2020-03-26 Thu 16:01]--[2020-03-26 Thu 16:18] =>  0:17
+:END:
+海报应具有以下元素
+- [X] 九周年应有数字九
+- [X] Campus 俱乐部名字
+- [X] 最好突出我们是英语俱乐部
+- [ ] 突出演讲这个主要形式
+- [X] 突出我们是一个大家庭
+
+主色调可选用比较有科技感的鲜艳颜色
+*** DONE 与海报配套的邀请函
+CLOSED: [2020-03-27 Fri 15:33] DEADLINE: <2020-03-28 Sat 12:00> SCHEDULED: <2020-03-25 Wed 10:00>
+:PROPERTIES:
+:Effort:   2h
+:END:
+:LOGBOOK:
+CLOCK: [2020-03-27 Fri 10:26]--[2020-03-27 Fri 11:30] =>  1:04
+CLOCK: [2020-03-27 Fri 13:03]--[2020-03-27 Fri 15:13] =>  2:10
+如果可以的话直接做成 HTML 的形式嵌入到邮件中，不行的话的做成图片的形式。
+
+Amy 已经做好了邀请函，并且我已经将邀请邮件发出去了，邮件中嵌入了邀请函图片与海报。
+*** DONE 帮助 Shirley 完成视频制作
+CLOSED: [2020-04-01 Wed 22:29] DEADLINE: <2020-03-31 Tue 10:00> SCHEDULED: <2020-03-25 Wed 10:00>
+主要是完成一些素材的剪辑
+** DONE <2020-04-04 Sat> [3/3] Grammarian
+CLOSED: [2020-04-04 Sat 11:54] DEADLINE: <2020-04-03 Fri 20:00> SCHEDULED: <2020-04-02 Thu 12:00>
+*** DONE determine a word
+CLOSED: [2020-04-04 Sat 13:06]
+:PROPERTIES:
+:Effort:   15min
+:END:
+render
+*** DONE search about the meaning and usages
+CLOSED: [2020-04-04 Sat 13:06]
+:PROPERTIES:
+:Effort:   45min
+:END:
+[[file:2020-04-04-Grammarian/render-1.png]]
+[[file:2020-04-04-Grammarian/render-2.png]]
+
+Good evening, Campus members and guests! I'm today's grammarian Cycoe! I will
+introduce the keyword of today, render. Render is a verb that I have only seen
+it in some books about computer technology, where it means "渲染". So I was
+interested in the original meaning of it. The first meaning is to cause someone
+or something to be in a particular state, like "His rudeness rendered me
+speechless." The second meaning is to change words into a different language or
+form, so it is a synonym of /translate/. She is rendering the book into English
+from French. The third meaning is to give something such as a service, a
+personal opinion or expression, or a performance of a song or poem, etc. to
+people. In computer or graphics, it extends this meaning to "present". "MatLab
+renders the graph of the PID control system" and "The graphics Processing Unit
+renders the game images." So I wish you could use it as more as possible.
+*** DONE Records
+CLOSED: [2020-04-04 Sat 21:00]
+**** Julie
+Mistakes
+- I want to say something (about) myself: lost /about/
+- your current favorite (a) book: use Article word with possessive pronounce
+- for herself(her own)
+**** Bella
+Good usages
+- someone is warm heated
+- go through a tough life
+- despite of many difficulties
+**** Amy
+Good Usages
+- Unforgettable regular meeting
+Mistakes
+- use the book to (be)gain a useful skill
+**** Crazy
+Good Usages
+- rendered me motivated
+- deliver my expressions
+**** Lucy
+Good Usages
+- It depends on who we are, and where we are
+- make good use of time
+**** Jocelyn
+Good Usages
+- rendered me (): I forget the word ==
+**** Watson
+Good Usages
+- expect our outing
+Mistakes
+- she(her) has been asked
+- more detailed(detail) store
+** DONE <2020-04-11 Sat> [1/1] Table topic evaluator
+CLOSED: [2020-04-11 Sat 21:00] DEADLINE: <2020-04-11 Sat 12:00>
+*** DONE Records
+CLOSED: [2020-04-11 Sat 21:00]
+**** TTM - Laben
+- Good Topic. Before this meeting, I thought maybe it is like the topic "phone
+  addiction", finally, I found it's interesting topic
+- good ppt design
+- debug your ppt before meeting
+**** Kobe
+bilibili Kobe is really smart, that you extend this topic to his favorite app to
+bilibili, and then describe his childhood about cartoons
+**** Leon
+If you are a foreigner in China, the most useful app is Baidu. Because Baidu is
+a search engine. When Leon found that there was also some time, Leon also
+introduced Wechat. I think if you could follow the thinking that a day of life
+in China, It will be more logical, It's a personal suggestion.
+**** Amy
+- write my name, then write my reason, and you complain your reason why you
+  followed this format with the situation that others add you, and you skip the
+  second part of question.
+**** Rob
+I think Rob always have some different thoughts, the storage of your phone is
+used out, you will clean some apps.
+- you could introduce an app that you think is useful and an app that you think
+  that can be replaced.
+**** Nate
+Nate extended the topic to If nessesary, which app would I uninstall. I think This
+question is a little difficult for Nate.
+- Question is a not that suitable, because it is not just about the favor, also
+  something about copyright.
+**** Rubby
+Rubby is very logical that you separate this question into several parts, chat, work
+- you could throw out your opinion first, the talk about the specific situations.
+**** Julie
+Julie is really like the people that is pure and innocent. Julie use an example
+that her friend use a cute profile.
+** DONE <2020-04-25 Sat> [3/3] Toast Master
+CLOSED: [2020-04-25 Sat 21:23] DEADLINE: <2020-04-24 Fri> SCHEDULED: <2020-04-21 Tue>
+*** DONE 明确 TM 职责与前期需要做的准备工作
+CLOSED: [2020-04-25 Sat 21:23] DEADLINE: <2020-04-22 Wed 20:00> SCHEDULED: <2020-04-21 Tue 10:00>
+:PROPERTIES:
+:Effort:   3h
+:END:
+- [X] 在头马助手上學習角色的職責 [[https://mp.weixin.qq.com/s?__biz=MzA5NDMwMjMyMg==&mid=502635088&idx=1&sn=c5fa4d417fabc101033fb22044a667a7&chksm=0851834d3f260a5bbbf1c89c83fee98bcdadf71f60992a108fa3ca34a52048c602c82fac1dba&mpshare=1&scene=1&srcid=04203ZF60cf2LukTtgztNf1r&sharer_sharetime=1587353307062&sharer_shareid=86b1808eca32392562e035e554f7d6f9&key=bb6b8c065a7fd33911ffcf985e5f389ee3f2feabc49c5e19429d52dbb62e029e4ba7421a3190a8c1628f9536e0aa2897208d4330343a005910001be46cacc52345fd945d14b8e9caa898f23fdf10b7f9&ascene=1&uin=MTUxOTYxNTgyMA%3D%3D&devicetype=Windows+7&version=62080085&lang=zh_CN&exportkey=ATtGkifbcKNwxVlQZnqzeI0%3D&pass_ticket=xRXDg%2FKR4iCFIKTTihU6%2Fk6jiTMko4xh%2BvWLPvmQ0KHMzpyN0OqXFIR0LH%2F7S1Ge][TM 职责在此处可查看]]
+- [X] 与 Watson 请教 TM 的職責
+- [X] 製作投票二维码
+- [X] 製作奖状
+- [X] 制作 Agenda
+*** DONE 确定主题
+CLOSED: [2020-04-22 Wed 20:17] DEADLINE: <2020-04-23 Thu 12:00> SCHEDULED: <2020-04-21 Tue 8:00>
+Future World
+:PROPERTIES:
+:Effort:   1h
+:END:
+*** DONE 准备开场白与串场
+CLOSED: [2020-04-25 Sat 21:23] DEADLINE: <2020-04-25 Sat 12:00> SCHEDULED: <2020-04-22 Wed 12:00>
+:PROPERTIES:
+:Effort:   2h
+:END:
+**** Opening speech and Introducing meeting roles - 3 min
+Good evening, ladies and gentlemen, Welcome to this wonderful meeting! And also
+welcome our guests! I wonder if you have watched the movie, /The Matrix/? The
+background of our post for this meeting, is from this movie. The green letters
+flowing down stand for the AI named /matrix/. These day, I reviewed these movies
+and is shocked by the creativity of them. In 1999, 43 years after the first time
+that Artificial Intelligence was introduced, people could make these fantastic
+ideas. So today, let's fly our magical ideas, and have a good evening.
+
+Back to the point, let's welcome our general evaluator Grace and her
+professional evaluation team. Welcome, Grace!
+
+**** Introduce Candymaster - 1 min
+OK, thanks our evaluation team. This section is candy section, let's welcome our
+Shirley and expect her interesting speech.
+
+**** Introduce the 1st. speaker - 1 min
+Thanks for our Shirley and her sharing. Next section is prepared speech section.
+Let's welcome our first speaker, Jocelyn. Jocelyn, Th future world, the future
+world, Jocelyn.
+
+**** Thanks for the 1st. speaker - 1 min
+Thanks for Jocelyn's speech, now we have 1min silence to write down the feels to
+this speech. You can send the private message to Jocelyn directly.
+
+**** 10 min Break
+Now we have a 10 minute break. We will take a photo by screenshot.
+
+**** Focus on the meeting - 1min
+Everybody, Let's begin the second half. The next section is the most exciting
+Table Topic Section. Let's welcome our Table Topic Master, Lucy. Welcome, Lucy!
+
+**** Invite  TTs Evaluator to evaluate
+Thanks for Lucy and her table topic section, next let's welcome our table topic
+evaluator, Amy.
+
+**** Vote & Count the results
+OK, all our roles have finished their missions. Now, let's scan the qrcode that
+I sent in our wechat group, and vote for your best speaker, best evaluator and
+best function role.
+
+**** When count the vote
+Now, We need time to count the vote, who want to say something about our topic
+or our speakers can speak offhand.
+
+Yesterday in your Wechat group, Watson and I talked about the movie /The
+Terminator/ and /The Matrix/. These two movie has something similar in their
+conception. They all talked about the over-controlled AI controlled the world.
+In Terminator is skynet and in Matrix is Matrix. They all mentioned the villains
+[ˈvɪlən], in Terminator is terminator and in matrix is the agents. So they all
+rang the alarm for us that AI may be over-controlled and the may control us. In
+1997, IBM developed a AI named /Deep Blue/ that won the champion of cheese match.
+These days, we almost cannot leave the AI. When you search the Internet, AI
+gives you the most accurate answers. When you use digital map to navigate, AI
+help you to find the shortest route. When you browse the Sina Blog, is also AI
+pushing your favorite news to you. AI do many things for us, so we can really
+expect the future world where AI will be more powerful.
+
+**** Run off the meeting & Present Awards
+Now is the most exciting section, we will present awards to our bests. Let's see
+who is the best speaker. xxx, congratulations, xxx!
+
+歡樂的時光過得特別快，又係時候講拜拜。
+
+*** Vote URL
+https://www.wjx.cn/jq/74019076.aspx
+*** Feedback
+- 作爲整個會議的主人，需要更多的激情
+- 開頭介紹時間太短，可以繼續發揮
+** DONE <2020-05-16 Sat> Ah Counter
+CLOSED: [2020-05-16 Sat 22:28]
+*** DONE Records
+CLOSED: [2020-05-16 Sat 22:28]
+#+TBLNAME: Ah-counting-2
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+| Name    | modal particles | And | Well | But | Repeats | Other | Total |
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+| Grace   |               0 |   1 |    0 |   0 |       2 |     0 |     3 |
+| Alisa   |               5 |   0 |    0 |   0 |       4 |     0 |     9 |
+| Watson  |               0 |   0 |    0 |   0 |       3 |     0 |     3 |
+| Kobe    |               2 |   0 |    0 |   0 |       5 |     0 |     7 |
+| Lucy    |               1 |   1 |    0 |   0 |       0 |     0 |     2 |
+| Amy     |               6 |   0 |    0 |   0 |      11 |     0 |    17 |
+| Jocelyn |               4 |   0 |    0 |   0 |       8 |     0 |    12 |
+| Shirley |               2 |   0 |    0 |   0 |       9 |     0 |    11 |
+| Nate    |               0 |   0 |    0 |   0 |       3 |     0 |     3 |
+| He      |               6 |   0 |    0 |   0 |       0 |     0 |     6 |
+|---------+-----------------+-----+------+-----+---------+-------+-------|
+#+TBLFM: $8=vsum($2..$7)
+
+#+begin_src gnuplot :file ./Regular Meeting Roles/2020-05-16-ah-counting.png :var data=Ah-counting-2
+  set term pngcairo size 1600, 1200 font ',32'
+  firstcol=2
+  cumulated(i)=((i>firstcol)?column(i)+cumulated(i-1):(i==firstcol)?column(i):1/0)
+
+  # Set the first line as headers
+  set key autotitle columnhead tmargin center box horizontal
+  set style fill solid 1 border lt -1
+  set style data histograms
+  set style histogram rowstacked
+  set xtics font '-Bold' rotate by -30 offset -2,0
+  set grid
+
+  # Set the first column as x axis ticks labels
+  plot for [i=2:7] data using (column(i)):xticlabels(1)
+#+end_src
+
+#+RESULTS:
+[[file:./Regular Meeting Roles/2020-05-16-ah-counting.png]]
+
+**** Shirley
+Maybe you are stressed or a little familiar to some difficult words
+*** Feedback for me
+** DONE <2020-05-23 Sat> Grammarian
+CLOSED: [2020-05-22 Fri 22:49]
+*** DONE determine a word
+CLOSED: [2020-05-22 Fri 22:49]
+explicit：明确的；显式的
+
+#+ATTR_SRC: :width 800px
+#+CAPTION: explicit
+[[file:Regular Meeting Roles/2020-05-22_22-48-grammarian.png]]
+*** search about the meaning and usages
+Good evening, Campus members and guests! I'm today's grammarian Cycoe! I will
+introduce the keyword of today, explicit! explicit is an adjective, and it means
+clear and exact. There are two common usages in our daily life. Someone is very
+explicit about something means someone says something very clearly and exactly.
+And make something explicit means state something clearly. The adverb of
+explicit is explicitly. When you are using computer, explicit means you should
+write down or do something exactly to let the computer know that you want
+something different from the default options. I hope you could use this word as
+more as possible in today's meeting. At some point after that, I will deliver a
+report about your grammar performance. Thank you, back to our general evaluator.
+***  Records
+**** Watson
+*Advantages*
+- ... so that ...
+
+**** Grace
+*Mistakes*
+- it +is+ only lasted for one day
+- Li Keqiang +deliver+ (delivered) the government work report
+- There +have+ (are) some differences
+
+*Advantages*
+- two sessions 两会
+**** Julie
+*Mistakes*
+- interesting +video+ (videos)
+- some +test+ (tests)
+- +bring+ (bringing) your mind back
+
+*Advantages*
+- not only... but also
+
+**** Lucy
+*Mistakes*
+- +did+ (do) you really...
+
+*Advantages*
+- capture the face of you
+- all in all, ...
+- get into your speech
+
+**** Leon
+*Mistakes*
+- those who +performance+ (performed) better than her
+- the (most) suitable one to do this job
+
+*Advantages*
+- employees and employers 雇佣者与雇员
+
+**** Amy
+*Mistakes*
+- some +point+ (points)
+- +whether I can don't go work+ (whether I don't have to work)
+
+*Advantages*
+- the style of the work
+
+**** Nate
+*Mistakes*
+
+*Advantages*
+- occupy the position 担任职位
+
+**** Kobe
+*Mistakes*
+- responsible +for+ (to) our employees
+- have a +prepared+ (preparation) for the possibility
+
+**** Alisa
+*Mistakes*
+- someone +have+ (has) made
+- to (be) a bad person
+
+*Advantages*
+- find out more truth
+
+**** Jocelyn
+*Mistakes*
+- like Alisa +says+ (said)
+- she first +tell+ (told) us
+- make your speech a little bit +long+ (longer)
+
+*Advantages*
+- express their thoughts
+- persuade us not to do things like it (persuade us out of doing things like it)
+
+**** Laben
+*Mistakes*
+- he +need+ (needs) a person to do
+
+*Advantages*
+- you really want to apply this job, instead of ...
+** DONE <2020-05-30 Sat> Candy Master
+CLOSED: [2020-05-30 Sat 20:51]
+*** DONE Determine a context
+CLOSED: [2020-05-30 Sat 16:41]
+When you surf the Internet...
+
+*** DONE Keywords
+CLOSED: [2020-05-30 Sat 17:16]
+- browse :: 闲逛，吃草
+- wander :: 闲逛
+- cache :: 快取
+- authentication :: 身份认证
+- popup :: 弹窗
+- login :: 登录
+- register :: 注册
+- CAPTCHA :: 验证码
+- contrived :: 人为的
+- acronym :: 缩写
+- Turing test :: 图灵测试
+- postfix :: 后缀
+- large capacity storages :: 大容量存储器
+- operator :: 操作员
+- backup :: 备份
+- magnetic tapes :: 磁带
+- forum :: 论坛
+- modification :: 修改
+- installation :: 安装
+
+*** DONE Draft
+CLOSED: [2020-05-30 Sat 17:16]
+**** Frame 1
+Good evening guys, I am todays Candy Master Cycoe. Today my topic is when you
+surf the Internet. When you surf the Internet, you may meet some words confusing
+and maybe also interesting. So today I will intorduce some words that you may
+meet someday to you.
+
+**** Frame 2
+When you surf the Internet, you must use a application named `browser` like
+Chrome, Edge or Firefox. `browse` this word origianlly means the cows and goats
+wander around and eat grass. So the word browser vividly describes the gesture
+where you surf the Internet.
+
+**** Frame 3
+When you use the computer, you will always see these two words, cookie and
+cache. 点心 和 快取
+ 
+Cookie in computer stands for a small piece of data sent from a website and
+stored on the user's computer by the user's web browser while the user is
+browsing. Whether you notice it or not, almost websites just need login once,
+and the second time it will login automatically. It is the authentication
+cookies taking effect.
+
+Cache is a technology or software component that stores data so that future
+requests for that data can be served faster. So when you use computer, 360 and
+金山毒霸 always popup a window to tell you that (清除缓存来加速电脑). Here 清除
+缓存 just means clean the cache. Good using of cache could boost your computer,
+sometimes clean the cache will even make your computer slower.
+
+**** Frame 4
+When you are register or logging-in, something will popup like these, all them
+are called CAPTCHA, including 验证码, 滑块, 图像识别 and etc.
+
+CAPTCHA is a contrived acronym of `completely automated public Turing test to
+tell computers and humans apart`, just as its name implies, it is designed for
+telling the difference between humans and computers, and refuses the actions
+made by robots. CAPTCHAs are very important to our private security. Without
+CAPTCHAs, hackers will access our passwords and personal information very
+easily. But there are also some funny CAPTCHAs like these. I think neither
+humans or robots could recognize it.
+
+**** Frame 5
+When you download a file from website, maybe the postfix of it is zip, 7z or
+rar. we always call it an archive or a compressed package. Archive means you
+sort the files (文件) and put theme into the correct drawer, and extract has the
+opposite meaning that you take out a specific file from the archive. Compress
+means you decrease the size of a file by some approaches, and decompress has the
+opposite effect.
+
+Nowadays we always mix using these two words, but in history, they have totally
+difference meaning. In history, there were no large capacity storages, so
+operator would backup data in the magnetic tapes like these. And then sorted the
+tapes on the bookshelves. This action is called `tape archive`, so in some
+modern system, the action that you put some files, images or videos into one
+file is called `archive`. And the action that you decrease the size of archive
+with some tools is called compress.
+
+**** Frame 6
+Imagine your firefox browser was crashed and can never open again, so you
+described this problem in a forum. A guy asked you that you use a vanilla
+version or a customized version. What was he talking about? Actually, vanilla is
+a kind of flavoring and flower, and can be used to extract vanillin (香兰素).
+But in computer softwares, and sometimes also other computing-related systems,
+vanilla stands for those softwares that are not customized from their original
+form, meaning that they are used without any customizations or updates applied
+to them. So if he told you to use a vanilla version means that he told you to
+clean your personal modifications and have a new installation. Maybe this way
+can solve your problem.
+
+*** DONE Feedback
+CLOSED: [2020-05-30 Sat 20:46]
+- Could have more interactions with audiences
+- Highlight the keywords to attract others' attention
+** DONE <2020-05-30 Sat> Prepared Speech Evaluator
+CLOSED: [2020-05-30 Sat 20:51]
+*** Advantages
+- It's term of graduation, so I think your really chose a good topic and content
+  for this occasion. And after this vocation, you will graduate from BUCT, and
+  may not have chance to take part in us again. I think it's reluctant to say
+  goodbye with you, and it's a sad thing.
+- I have to say I really like your pronunciation, and you also make progress
+  from the first time you delivered a speech.
+- I am very happy to see your progress in your speech speed control. In my
+  memory, you usually speak too fast for me to catch up with you, and same the
+  last meeting. But this speech, I think you have a good control with your speed.
+*** Need to improve
+- For content, I found that you expressed your topic by many imaginations, I
+  think if you could give more examples about the experience will be better
+- Another little suggestion is that when you have a speech online, you could sit
+  back a little and exposing the upper part of the body, also exposing your arms
+  and hands will better. And then we could capture more gestures.
+
+** DONE <2020-06-06 Sat> Timer
+CLOSED: [2020-06-06 Sat 22:00]
+*** Records
+**** Speeches
+|------------------+---------+------------+-------|
+| Sections         | Member  | Time Using | Limit |
+|------------------+---------+------------+-------|
+| Candy Section    | Kobe    |       6:00 |  5:00 |
+| Prepared Speech  | Watson  |       4:27 |  7:00 |
+| TT Section       | Shirley |      32:28 | 30:00 |
+| TT Evaluation    | Amy     |       7:40 |  7:00 |
+| Evaluation for I | Lucy    |       3:33 |  3:00 |
+|------------------+---------+------------+-------|
+**** Table Topic Section
+#+TBLNAME: timer-2020-06-06
+|----+---------+------|
+|  1 | Kobe    | 2:17 |
+|  2 | Lucy    | 2:17 |
+|  3 | Nate    | 2:01 |
+|  4 | Grace   | 2:13 |
+|  5 | Judy    | 2:16 |
+|  6 | Watson  | 1:37 |
+|  7 | Leon    | 2:06 |
+|  8 | Jocelyn | 1:47 |
+|  9 | Amy     | 2:17 |
+| 10 | Alisa   | 2:11 |
+|----+---------+------|
+
+#+begin_src gnuplot :file ./Regular Meeting Roles/2020-06-06-timer.png :var data=timer-2020-06-06
+  # set term pngcairo size 1600, 1200 font ',32'
+
+  # set style data histograms
+  set style fill pattern 2 border lt -1
+  set nokey
+  set grid
+  set xtics rotate by -30 offset -2,0
+  set ydata time
+  set timefmt "%M:%S"
+  set format y "%M:%S"
+  set yrange[0:]
+
+  plot data using 3:xticlabels(2) with histogram, 120 with line lc 'red'
+#+end_src
+
+#+RESULTS[814e331de12446a10b7d436b0dc4af01f8f84106]:
+[[file:./Regular Meeting Roles/2020-06-06-timer.png]]
+** DONE <2020-06-27 Sat> VPPR Work Report
+CLOSED: [2020-06-27 Sat 22:18]
+*** DONE Prepare the report slides
+CLOSED: [2020-06-26 Fri 11:57] DEADLINE: <2020-06-27 Sat 12:00> SCHEDULED: <2020-06-25 Thu 18:00>
+说明自己在任职期间所做的工作，主要是完成了每一期的海报制作，可以做成除 PPT 其它
+的形式
+
+*** DONE Speech Draft
+CLOSED: [2020-06-26 Fri 13:14] DEADLINE: <2020-06-27 Sat 12:00> SCHEDULED: <2020-06-26 Fri 11:00>
+:PROPERTIES:
+:Effort:   1h
+:END:
+:LOGBOOK:
+CLOCK: [2020-06-26 Fri 13:00]--[2020-06-26 Fri 13:14] =>  0:14
+CLOCK: [2020-06-26 Fri 11:58]--[2020-06-26 Fri 12:11] =>  0:13
+:END:
+Good evening, club members and guests! I'm your VPPR, Cycoe. Today, I will give
+my work report of VPPR during the term of service.
+
+Firstly, let me introduce the tasks and duties of VPPR. As you know, VPPR
+denotes /Vice President Public Relations/, committed to introduce the existence
+and benefits of the club to the local community and media. I think this is the
+minimum requirement in VPPRs' responsibilities, let others know the existence of
+our club and be willing to take part in. The higher requirement is that spread
+the influence through Internet, meanwhile, protect the club image, which can
+make the club better.
+
+During my term of service, I made 17 posters for our regular meetings and also
+the anniversary activity. (Press) Before the regular meetings, I sent the
+posters and invitations into the guest wechat groups. (Press) After doing those,
+I harvested a good rating on the design of poster. Before made each poster, I
+had discussed the purpose of the topic with members to convey the topic meaning
+accurately. After I sent the invitations in the guest wechat group, we attracted
+some new guests into the meetings.
+
+So, with this experience, I gained many things. Before I took the role of VPPR,
+I was utterly ignorant of design. But now, I gained many skills in poster
+design. As an official, I also built up connections with other clubs. But there
+are also some pities. When I campaigned for this role, I said that I wanted to
+establish our own website, but it haven't come true.
+
+With this experience I think, maybe there are some pities, I also gained many
+skills and harvests from this term, which can help me go further. Thank you!
+
+*** DONE 与 Rob 交接工作和材料
+CLOSED: [2020-06-28 Sun 10:42] DEADLINE: <2020-07-01 Wed 12:00> SCHEDULED: <2020-06-27 Sat 22:20>

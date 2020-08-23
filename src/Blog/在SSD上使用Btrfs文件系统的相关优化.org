@@ -1,0 +1,108 @@
+#+TITLE: 在 SSD 上使用 Btrfs 文件系統的相關優化
+#+DATE: <2017-03-25 Sat>
+#+LAYOUT: post
+#+TAGS: SSD, Btrfs, Linux
+#+CATEGORIES: Linux
+
+#+HTML: <!-- more -->
+
+** 優化掛載參數
+   :PROPERTIES:
+   :CUSTOM_ID: 優化掛載參數
+   :END:
+
+在 Linux 中掛載 SSD 上的 btrfs，可以採用各種參數進行優化：
+
+#+BEGIN_SRC conf
+  #<file system><mount point><type><options><dump><pass>
+  UUID=<略>/ btrfs defaults,ssd,discard,noatime,compress=lzo,subvol=@
+#+END_SRC
+
+*** ssd
+    :PROPERTIES:
+    :CUSTOM_ID: ssd
+    :END:
+
+btrfs 文件系統有對 SSD 進行優化，在掛載參數中加入 =ssd= 即可。該參數不會自動啓用
+TRIM/discard。
+
+*** discard
+    :PROPERTIES:
+    :CUSTOM_ID: discard
+    :END:
+
+可以通過以下命令確認 SSD 是否支持 TRIM：
+
+#+BEGIN_SRC sh
+  $ sudo hdparm -I /dev/sdX | grep TRIM
+  *Data Set Management TRIM supported (limit 8 blocks)
+#+END_SRC
+
+若 SSD 支持 TRIM 命令，可以在 =/etc/fstab= 中啓用 =discard= 參數。建議將
+=discard= 掛載參數作爲首選。據 debian wiki所述，包括三星、鎂光、英睿達在內的一些
+SSD
+[[https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/drivers/ata/libata-core.c#n4227][
+在 discard/TRIM 上有問題]]，不能合適地處理 TRIM 命令。該參數不是必需的，也可以自
+定義週期性運行 fstrim 命令來取代該參數，使用該命令前要確認 SSD 支持TRIM，否則可
+能造成數據丟失。當 SSD 有足夠的空餘空間或（未分配的）可用空間時不需要該參數。
+
+*** noatime
+    :PROPERTIES:
+    :CUSTOM_ID: noatime
+    :END:
+
+掛載參數可以加入 =noatime= ，通過禁止更新訪問記錄來減少不必要的寫操作以提高性能。
+該選項對HDD 同樣有性能提升。btrfs 的默認配置爲 =realtime= 。
+
+*** compress
+    :PROPERTIES:
+    :CUSTOM_ID: compress
+    :END:
+
+打開壓縮功能在通常情況下有利於提高傳輸性能（並非絕對），也可以節省存儲空間。加入
+以下掛載參數：
+#+begin_src conf
+  compress=lzo
+  compress=zlib
+#+end_src
+
+lzo 速度更快，zlib 壓縮率更高。注意確認 SSD 主控是否是非壓縮主控，若爲壓縮主控不
+建議加入該參數。
+
+*** 寫緩存
+    :PROPERTIES:
+    :CUSTOM_ID: 寫緩存
+    :END:
+
+若 SSD 帶有緩存，啓用 Write Cache 可以提高性能：Disks -> Drive Setting -> Enable
+Write Cache，但在突然斷電的情況下可能造成數據丟失。
+
+--------------
+
+** I/O 調度
+   :PROPERTIES:
+   :CUSTOM_ID: io-調度
+   :END:
+
+SSD 結構不同於傳統硬盤，尋址時間短，I/O 調度算法可選擇 noop 以降低延遲。以下命令
+可查看與修改調度器：
+
+#+BEGIN_SRC sh
+  cat /sys/block/sdX/queue/scheduler # sdX 指你的設備
+  sudo tee /sys/block/sdX/queue/scheduler <<< noop
+#+END_SRC
+
+注意以上方法並不持久，重啓後會重置。如果 SSD 是系統唯一的存儲設備，可考慮通過
+=elevator=noop= 內核參數設置 I/O 調度器。也可使用 udev 規則來修改調度器，對多存
+儲設備同樣有效：
+
+#+BEGIN_SRC sh
+  sudo touch /etc/udev/rules.d/60-ssd-scheduler.rules #創建該文件
+#+END_SRC
+
+文件內容如下：
+
+#+BEGIN_SRC conf
+  # set deadline scheduler for non-rotating disks
+  ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/rotational}=="0", ATTR{queue/scheduler}="noop"
+#+END_SRC

@@ -1,0 +1,46 @@
+#+TITLE: 靜態編譯安裝 Qt
+#+DATE: <2017-04-11 Tue>
+#+LAYOUT: post
+#+TAGS: Linux
+#+CATEGORIES: Linux
+
+由於 pyqt 寫的程序打包過程中依賴庫的問題，打算用 c++ 版的 Qt 重寫程序。但若用系
+統自帶的共享鏈接庫進行編譯，程序同樣無法在其他機器上運行。因此，此時需要自己手動
+靜態編譯 Qt，使用靜態鏈接庫編譯的程序會自動將依賴的庫加到最終編譯出的機器碼中。
+
+#+HTML: <!-- more -->
+
+** 安裝依賴項
+   :PROPERTIES:
+   :CUSTOM_ID: 安裝依賴項
+   :END:
+
+- Qt 的界面顯示依賴 =freetype= 和 =fontconfig= ，這兩個一定要裝上，否則編譯不成功。
+- 安裝完畢後創建 =freetype= 的軟鏈接到標準的安裝位置： =ln -s
+  /usr/include/freetype2/freetype /usr/include/freetype=
+
+** 編譯
+   :PROPERTIES:
+   :CUSTOM_ID: 編譯
+   :END:
+
+1. [[http://download.qt.io/official_releases/qt/][下載]]最新的 Qt everywhere 壓縮包
+2. 解壓壓縮包， =cd= 進壓縮包目錄
+3. 運行以下命令對 =makefile= 進行配置 =shell ./configure -confirm-license -opensource -static -fontconfig -release -no-qml-debug -qt-xcb -nomake tests
+   -nomake examples -skip qtwebkit -prefix /usr/include/Qt-5.8.0-static=
+
+   - =-static= -> 選擇靜態編譯模式
+   - =-fontconfig= -> 此項一定要加，否則會導致找不到字體
+   - =-prefix= -> 指定安裝位置
+
+4. 運行 =make -j 4= 採用 4 線程編譯
+5. 最後 =sudo make install= 安裝 Qt
+
+** 配置 Qt Creator
+   :PROPERTIES:
+   :CUSTOM_ID: 配置-qt-creator
+   :END:
+
+1. 安裝 Qt Creator
+2. 打開 Qt Creator -> tools -> options -> build，根據安裝路徑配置 Qt version 和
+   Kit

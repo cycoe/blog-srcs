@@ -1,0 +1,544 @@
+#+TITLE: 与 C++ 的第三类接触-字符串、向量和数组
+#+DATE: <2020-05-30 Sat 21:03>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+** 字符串、向量和数组
+*** 标准库 =string=
+引入头文件与声明命名空间
+#+begin_src C++ :results none
+  #include <string>
+  using std::string;
+#+end_src
+**** 定义和初始化
+#+begin_src C++ :includes <string> :results none
+  using std::string;
+
+  string s1;            // 默认初始化，s1 是一个空字符串
+  string s2 = s1;       // s2 是 s1 的副本
+  string s3 = "hello";  // s3 是字符串字面值的副本
+  string s4("hello");   // s4 的内容为 "hello"
+  string s5(10, 'c');   // s5 的内容为 "cccccccccc"
+#+end_src
+
+s2, s3 的初始化方法为拷贝初始化，s4, s5 的初始化方法为直接初始化。
+**** 为 string 对象赋值
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s1, s2(10, 'c');
+  s1 = s2;       // 用 s2 的值赋值 s1，相当于拷贝了 string 对象
+  s2 = "Hello";  // 用字面值常量赋值 s2
+
+  cout << "s1 is: " << s1 << endl;
+  cout << "s2 is: " << s2 << endl;
+#+end_src
+
+#+RESULTS[36d403cc215745ee6c126175f1ce4af73b1cb0e1]:
+: s1 is: cccccccccc
+: s2 is: Hello
+
+**** 读写 string 对象
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+  string s;            // 声明一个空字符串
+
+  cin >> s;
+  s = "Hello";
+  cout << s << endl;
+#+end_src
+
+#+RESULTS[e277d88b6e01b558ba4ef4f34b55ab2a484808b1]:
+: Hello
+
+**** 使用 =getline= 读取一整行
+#+begin_src C++ :includes <iostream> :results none
+  using namespace std;
+  string line;
+
+  // getline 每次读取到换行符（包括换行符），存入 string 对象中（不包括换行符）
+  while (getline(cin, line))
+    cout << line << endl;
+#+end_src
+
+**** =empty= 和 =size=
+#+CAPTION: 多行文本
+#+TBLNAME: multi-line
+| First line.          |
+| Second line.         |
+|                      |
+| This is a long line. |
+
+使用上表中的数据演示 string 对象 =empty= 和 =size= 方法的使用
+
+#+begin_src C++ :var lines=multi-line :includes <iostream> <string>
+  using namespace std;
+
+  string s;
+  int row;
+
+  for (row = 0; row < lines_rows; row++) {
+    s = lines[row][0];
+    if (s.empty()) {
+      cout << "Line " << row + 1 << " is empty" << endl;
+    } else {
+      cout << "Line " << row + 1 << "'s length is " << s.size() << endl;
+    }
+  }
+#+end_src
+
+#+RESULTS[53ea81c5cc1c9e20db6d5b47b8d272b5c740952e]:
+: Line 1's length is 11
+: Line 2's length is 12
+: Line 3 is empty
+: Line 4's length is 20
+
+**** 比较 string 对象
+类似于 C 中的 =strcmp= 函数，依次比较各字符的字典序
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s1("hello");
+  string s2("world");
+
+  if (s1 > s2)
+    cout << "s1 is bigger than s2." << endl;
+  else
+    cout << "s2 is bigger than s1." << endl;
+#+end_src
+
+#+RESULTS[4f04efbdcbc8b1a9e7a47fd487fa40b0ff93d9b1]:
+: s2 is bigger than s1.
+
+**** string 对象相加
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s1 = "Hello, ";
+  string s2 = "world.";
+  cout << s1 + s2 << endl;
+  s1 += s2;
+  cout << s1 << endl;
+#+end_src
+
+#+RESULTS[fa8aa32d1bb191979a6f03e5813622b5af275829]:
+: Hello, world.
+: Hello, world.
+
+**** 字面值与 string 对象相加
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s1 = "hello", s2 = "world";
+  // 需要保证每次加法运算时至少有一个是 string 对象
+  string s3 = s1 + ", " + s2 + '!';
+  cout << s3 << endl;
+#+end_src
+
+#+RESULTS[020bc37bb972b78a33b26a503bfc80ae1d0ae49d]:
+: hello, world!
+
+**** 处理 string 对象中的字符
+用基于范围的 for 语句遍历 string 对象中的字符
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string str("some string");
+  // 基于范围的 for 语句
+  for (auto c : str)
+    cout << c << " | ";
+#+end_src
+
+#+RESULTS[7e50f0f614c2e7c07cbe3b5ae9502d378c78b3e6]:
+: s | o | m | e |   | s | t | r | i | n | g |
+
+统计 string 对象中的标点符号个数
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s("Hello, world!!!");
+  decltype(s.size()) punct_count = 0;
+  for (auto c : s)
+    if (ispunct(c))
+      ++punct_count;
+
+  cout << punct_count << " punctuation characters in " << s << endl;
+#+end_src
+
+#+RESULTS[286f9ee56aee602e198e752b0fcf4eea6d85934e]:
+: 4 punctuation characters in Hello, world!!!
+
+更改 string 对象中的字符，此时需要使用引用
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  string s1("Talk is cheap, ");
+  // 使用范围的 for 循环
+  for (auto &c : s1)
+    c = toupper(c);
+
+  cout << s1 << endl;
+
+  string s2("show me the code!");
+  // 使用传统的 for 循环
+  for (decltype(s2.size()) i = 0; i < s2.size(); i++)
+    // string 对象的索引返回指向对应字符的一个引用
+    s2[i] = toupper(s2[i]);
+
+  cout << s2 << endl;
+#+end_src
+
+#+RESULTS[0f02dbb4140b3adfc61e419ff023af258da91619]:
+: TALK IS CHEAP, 
+: SHOW ME THE CODE!
+
+**** 使用字符串数组初始化 string 对象
+#+begin_src C++ :includes <iostream> <string>
+  using namespace std;
+
+  char str[] = "Hello, world!";   // 初始化 C 风格的字符串
+  string s(str);                  // 使用字符串数组初始化 string 对象
+  cout << s << endl;
+#+end_src
+
+#+RESULTS[ede1ae0ca823e3817831f707774779134affcb3d]:
+: Hello, world!
+
+**** 从 string 对象中获取 C 风格的字符串数组指针
+#+begin_src C++ :includes <iostream> <string>
+  using namespace std;
+
+  string s("Hello, world!");
+  // 获取 C 风格的字符串数组指针，并且指向 string 中的字符串数组
+  // 不应该使用该指针修改数组内容，因此使用 const 限定符
+  const char *str = s.c_str();
+  cout << str << endl;
+#+end_src
+
+#+RESULTS[2b63d0073cf386c537ef1a246d39a3f77b1ee0f5]:
+: Hello, world!
+
+*** 标准库类型 =vector=
+引入头文件与声明命名空间， =vector= 是一个类模板
+#+begin_src C++ :results none
+  #include <vector>
+  using std::vector;
+#+end_src
+**** 定义和初始化
+#+begin_src C++ :eval no
+  #include <vector>
+  using std::vector;
+
+  vector<T> v1;                 // v1 是一个空 vector ，它潜在的元素是 T 类型
+  vector<T> v2(v1);             // v2 包含有 v1 所有元素的副本
+  vector<T> v3 = v1;            // 等价于 v3(v1)
+  vector<T> v4(n, val);         // 包含 n 个重复的 val
+  vector<T> v5(n);              // 包含 n 个重复的 T 类型元素并执行默认初始化
+  vector<T> v6{a, b, c...};     // 用 a, b, c... 执行初始化
+  vector<T> v7 = {a, b, c...};  // 等价于 v7{a, b, c...}
+  vector<T> v8 = (a, b, c...);  // 错误
+#+end_src
+
+默认初始化
+#+begin_src C++ :eval no
+  vector<int> ivec(10);     // 10 个元素，每个都初始化为 0
+  vector<string> svec(10);  // 10 个元素，每个都旦下人空 string 对象
+#+end_src
+
+括号内的数字是元素数量还是初始化，要看用的是花括号还是圆括号。花括号和圆括号具有
+完全不同的含义，圆括号表示实例化对象，花括号代表列表初始化，但在当编译器发现提供
+的元素无法使用列表初始化时，会 fallback 到默认的圆括号实例化对象。
+#+begin_src C++ :eval no
+  vector<int> v1(10);      // v1 有 10 个元素，每个值都是 0
+  vector<int> v2{10};      // v2 有 1 个元素，值为 10
+  vector<int> v3(10, 1);   // v3 有 10 个元素，每个值都是 1
+  vector<int> v4{10, 1};   // v4 有 2 个元素，值分别是 10 和 1
+
+  vector<string> v5{"hi"};      // 列表初始化：v5 有一个元素
+  vector<string> v6("hi");      // 错误：不能使用字符串字面值构建 vector 对象
+  vector<string> v7{10};        // v7 有 10 个默认初始化的元素
+  vector<string> v8{10, "hi"};  // v8 有 10 个值为 "hi" 的元素
+#+end_src
+
+**** 向 vector 对象中添加元素
+#+begin_src C++ :includes <iostream> <vector>
+  using namespace std;
+
+  vector<int> iv;
+  for (int i = 0; i < 10; i++) {
+    iv.push_back(i);
+  }
+  // 如果循环体内部包含有改变 vector 长度的语句，则不能使用范围 for 循环
+  for (auto num : iv) {
+    cout << num << ", ";
+  }
+#+end_src
+
+#+RESULTS[f9dfe537471c3ce4b8cb24a2ae47e7fa8c67d952]:
+: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+
+**** 其它 vector 操作
+vector 对象的其它操作与 string 对象类似
+
+#+CAPTION: 一些单词
+#+TBLNAME: some-words
+| Keep | it | simple | stupid |
+
+#+begin_src C++ :includes <iostream> <vector> <string> :var input=some-words
+  using namespace std;
+
+  vector<string> vstrings;
+  // 将 string 对象加入到 vector 中
+  for (int col = 0; col < input_cols; col++) {
+    vstrings.push_back(input[0][col]);
+  }
+  // 将 vector 对象中的每个 string 对象中的每个字符转换为大写，注意 *引用*
+  for (string &s : vstrings) {
+    for (auto &c : s) {
+      c = toupper(c);
+    }
+  }
+  for (string s : vstrings) {
+    cout << s <<endl;
+  }
+#+end_src
+
+#+RESULTS[17f4e11722d2d98445af1b995f902b470f6ac50d]:
+: KEEP
+: IT
+: SIMPLE
+: STUPID
+**** 用数组初始化 vector 对象
+#+begin_src C++ :includes <iostream> <vector>
+  using namespace std;
+
+  int int_arr[] = {0, 1, 2, 3, 4};
+  // 指明数组的 begin 和 end 指针
+  vector<int> ivec1(begin(int_arr), end(int_arr));
+  for (auto i : ivec1) {
+    cout << i << ", ";
+  }
+  cout << endl;
+
+  vector<int> ivec2(int_arr, int_arr + 5);
+  for (auto i : ivec2) {
+    cout << i << ". ";
+  }
+  cout << endl;
+#+end_src
+
+#+RESULTS[7f04fdf28a8c949eb0b6a72e2383f43e9bd0fcf1]:
+: 0, 1, 2, 3, 4, 
+: 0. 1. 2. 3. 4.
+
+*** 迭代器
+C++ 中的迭代器与 Python 中的含义有一些区别，Python 中的迭代器指的是可迭代的容器，
+而 C++ 中指的是指向元素的指针对象。相较于下标索引，迭代器的好处是所有标准库容器
+都支持迭代器运算
+
+#+CAPTION: 迭代器与迭代器类型
+[[file:./C++-学习记录/Screenshot_20200529_121858_HkqmoF.png]]
+
+#+begin_src C++ :eval no
+  vector<T> vec;
+  // 由编译器决定 b 和 e 的类型
+  // b 表示第一个元素，e 表示 vec 尾元素的下一位置，因此也被称为尾后迭代器
+  auto b = vec.begin(), e = vec.end();
+
+  // 事实上标准库使用 iterator 和 const_interator 来表示迭代器的类型
+  vector<int>::iterator it1;         // 读写 vector<int> 的元素
+  string::iterator it2;              // 读写 string 对象中的字符
+  vector<int>::const_iterator it3;   // 只能读
+  string::const_iterator it4;        // 只能读
+#+end_src
+
+**** 迭代器运算
+#+begin_src C++ :eval no
+  *iter;            // 返回 iter 所指元素的引用
+  iter->mem;        // 等价于 (*iter).mem
+  ++iter;           // 指向容器中的下一元素
+  --iter;           // 指向容器中的上一元素
+  iter + n;         // 返回新迭代器向前移动 n 个单位
+  iter - n;         // 返回新迭代器向后移动 n 个单位
+  iter1 == iter2;   // 是否指向同一元素
+  iter1 != iter2;   // 是否指向同一元素
+  iter1 - iter2;    // 返回迭代器的距离
+#+end_src
+
+将字符串改为大写的两种方式，对比下标运算与迭代器
+#+begin_src C++ :includes <iostream> <string>
+  using namespace std;
+  string s1("Keep it simple stupid");
+  for (int i = 0; i < s1.size(); i++)
+    s1[i] = toupper(s1[i]);
+  cout << s1 << endl;
+
+  string s2("Keep it simple stupid");
+  for (auto iter = s2.begin(); iter != s2.end(); iter++)
+    *iter = toupper(*iter);
+  cout << s2 << endl;
+#+end_src
+
+#+RESULTS[8b842cb3355b4c2579768db0b9b3e346e32c8fbd]:
+: KEEP IT SIMPLE STUPID
+: KEEP IT SIMPLE STUPID
+
+**** =begin= 和 =end= 运算符
+默认情况下 begin 和 end 返回的迭代器具体类型由容器的类型决定
+
+#+begin_src C++ :eval no
+  vector<int> v;
+  const vector<int> cv;
+  auto it = v.begin();      // it 的类型是 vector<int>::iterator
+  auto cit = cv.begin();    // cit 的类型是 vector<int>::const_iterator
+#+end_src
+
+C++ 11 标准引入了两个新函数 =cbegin= 和 =cend= ，不论 vector 对象是否本身是常量，返
+回的迭代器都是 =const_iterator=
+
+#+begin_src C++ :eval no
+  auto cit = v.cbegin();
+#+end_src
+
+**** 迭代器算数运算
+#+begin_src C++ :includes <iostream> <vector>
+  using namespace std;
+
+  vector<int> vi(10);
+  // 两个迭代器的差是 difference_type 类型
+  cout << "Begin - end is: " << vi.begin() - vi.end() << endl;
+  cout << "End - begin is: " << vi.end() - vi.begin() << endl;
+#+end_src
+
+#+RESULTS[fda2e930035e005dafbe6ca6272b7fea05ee2c67]:
+: Begin - end is: -10
+: End - begin is: 10
+*** 数组
+C++ 中的数组与 C 中基本一致，也同时支持指针和下标索引操作。定义数组时必须指针数
+组的类型，不允许用 =auto= 关键字由初始值的列表推断类型。
+
+#+begin_src C++ :eval no
+  int *ptrs[10];             // ptrs 是含有 10 个整型指针的数组
+  int &refs[10] = ...;       // 错误：不存在引用的数组
+  int (*Parray)[10] = &arr;  // Parray 指向一个含有 10 个整数的数组
+  int (&arrRef)[10] = arr;   // arrRef 引用一个含有 10 个整数的数组
+#+end_src
+
+**** 范围 for 语句
+数组也可以使用范围 for 语句
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  int arr[] = {0, 1, 2, 3, 4};
+  for (auto i : arr)
+    cout << i << " | ";
+  cout << endl;
+#+end_src
+
+#+RESULTS[91c1bbbe4973480e22f70f683c2fc44f452a6f72]:
+: 0 | 1 | 2 | 3 | 4 |
+
+**** 数组中的自动类型推断
+#+begin_src C++ :eval no
+  int a1[] =  {0, 1, 2, 3, 4};
+  auto a2(a1);                        // a2 是一个整型指针，指向 a1 的第一个元素
+
+  decltype(a1) a3 = {0, 1, 2, 3, 4};  // a3 是一个数组对象
+  a3 = a1;                            // 错误：不能用指针给数组赋值
+  a3[0] = 2;                          // 正确
+#+end_src
+
+**** 标准库函数 =begin= 和 =end=
+C++ 11 新标准引入了 =begin= 和 =end= 函数，定义在 =iterator= 头文件中
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  int ia[] = {0, 1, 2, 3, 4};
+  int *begin_ = begin(ia);
+  int *end_ = end(ia);
+  // 下标如指针，begin_[0] 等价于 *(begin_ + 0)
+  //             end_[-1] 等价于 *(end_ - 1)
+  // 需注意：标准库类型如 string 和 vector 的下标不能是负值
+  cout << "First elements is: " << begin_[0] << endl;
+  cout << "Last elements is: " << end_[-1] << endl;
+#+end_src
+
+#+RESULTS[e3e6a4f1d351db1def4df67a96dde0708a7f2a06]:
+: First elements is: 0
+: Last elements is: 4
+
+**** 指针的差值
+指针的差值与迭代器类似，同样只能对同种类型的指针作差，更近一步，参与运算的两个指
+针要指向同一数组中的元素。对不同数组中的指针作差属于未定义的行为，并且也没有意义。
+指针相减的结果是 =ptrdiff_t= 类型，同样是带符号类型，定义在 =cstddef= 头文件中。
+**** 多维数组与下标
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  constexpr size_t rows = 3, cols = 4;
+  int ia[rows][cols];
+  for (size_t i = 0; i != rows; i++) {
+    for (size_t j = 0; j != cols; j++) {
+      ia[i][j] = i * cols + j;
+    }
+  }
+
+  // 这个循环中没有任何写操作，但还是将外层的控制变量声明成了引用类型
+  // 这是为了避免数组被自动转成指针
+  for (const auto &row : ia) {
+    for (auto col : row)
+      cout << col << ", ";
+    cout << endl;
+  }
+#+end_src
+
+#+RESULTS[177ff654a973e23cd9efef97a19498dc1699a91a]:
+: 0, 1, 2, 3, 
+: 4, 5, 6, 7, 
+: 8, 9, 10, 11,
+
+**** 多维数组与指针
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  int ia[3][4];
+  int (*p)[4] = ia;   // p 指向含有 4 个 int 的数组
+  p = &ia[2];
+
+  // 使用 auto 自动推断数组指针类型
+  for (auto p = ia; p != ia + 3; p++) {
+    for (auto q = *p; q != *p + 4; q++) {
+      *q = q - *ia;
+    }
+  }
+
+  // 使用 begin 和 end 函数
+  for (auto p = begin(ia); p != end(ia); p++) {
+    for (auto q = begin(*p); q != end(*p); q++) {
+      cout << *q << ", ";
+    }
+    cout << endl;
+  }
+#+end_src
+
+#+RESULTS[8bf561c04bcc847976dc87698137d73008673d65]:
+: 0, 1, 2, 3, 
+: 4, 5, 6, 7, 
+: 8, 9, 10, 11,
+
+**** 类型别名简化多维数组指针
+
+#+begin_src C++ :includes <iostream> :eval no
+  using namespace std;
+
+  using int_array = int[4];   // 新标准的类型别名声明
+  typedef int int_array[4];   // 等价的 typedef 类型别名
+
+  for (int_array *p = ia; p != ia + 3; p++)
+    for (int *q = *p; q != 4; q++)
+      ,*q = q - *ia;
+#+end_src

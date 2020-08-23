@@ -1,0 +1,109 @@
+#+TITLE: 2020-05-23 Grammarian
+#+DATE: <2020-05-23 Sat 21:13>
+#+LAYOUT: post
+#+TAGS: TMC
+#+CATEGORIES: TMC
+
+#+HTML: <!-- more -->
+
+* <2020-05-23 Sat> Grammarian
+** DONE determine a word
+CLOSED: [2020-05-22 Fri 22:49]
+explicit：明确的；显式的
+
+#+ATTR_SRC: :width 800px
+#+CAPTION: explicit
+[[file:Regular Meeting Roles/2020-05-22_22-48-grammarian.png]]
+** search about the meaning and usages
+Good evening, Campus members and guests! I'm today's grammarian Cycoe! I will
+introduce the keyword of today, explicit! explicit is an adjective, and it means
+clear and exact. There are two common usages in our daily life. Someone is very
+explicit about something means someone says something very clearly and exactly.
+And make something explicit means state something clearly. The adverb of
+explicit is explicitly. When you are using computer, explicit means you should
+write down or do something exactly to let the computer know that you want
+something different from the default options. I hope you could use this word as
+more as possible in today's meeting. At some point after that, I will deliver a
+report about your grammar performance. Thank you, back to our general evaluator.
+**  Records
+*** Watson
+*Advantages*
+- ... so that ...
+
+*** Grace
+*Mistakes*
+- it +is+ only lasted for one day
+- Li Keqiang +deliver+ (delivered) the government work report
+- There +have+ (are) some differences
+
+*Advantages*
+- two sessions 两会
+*** Julie
+*Mistakes*
+- interesting +video+ (videos)
+- some +test+ (tests)
+- +bring+ (bringing) your mind back
+
+*Advantages*
+- not only... but also
+
+*** Lucy
+*Mistakes*
+- +did+ (do) you really...
+
+*Advantages*
+- capture the face of you
+- all in all, ...
+- get into your speech
+
+*** Leon
+*Mistakes*
+- those who +performance+ (performed) better than her
+- the (most) suitable one to do this job
+
+*Advantages*
+- employees and employers 雇佣者与雇员
+
+*** Amy
+*Mistakes*
+- some +point+ (points)
+- +whether I can don't go work+ (whether I don't have to work)
+
+*Advantages*
+- the style of the work
+  
+*** Nate
+*Mistakes*
+
+*Advantages*
+- occupy the position 担任职位
+  
+*** Kobe
+*Mistakes*
+- responsible +for+ (to) our employees
+- have a +prepared+ (preparation) for the possibility
+
+*** Alisa
+*Mistakes*
+- someone +have+ (has) made
+- to (be) a bad person
+
+*Advantages*
+- find out more truth
+
+*** Jocelyn
+*Mistakes*
+- like Alisa +says+ (said)
+- she first +tell+ (told) us
+- make your speech a little bit +long+ (longer)
+  
+*Advantages*
+- express their thoughts
+- persuade us not to do things like it (persuade us out of doing things like it)
+
+*** Laben
+*Mistakes*
+- he +need+ (needs) a person to do
+
+*Advantages*
+- you really want to apply this job, instead of ...

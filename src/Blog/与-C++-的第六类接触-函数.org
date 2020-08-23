@@ -1,0 +1,566 @@
+#+TITLE: 与 C++ 的第六类接触-函数
+#+DATE: <2020-06-05 Fri 15:13>
+#+LAYOUT: post
+#+TAGS: C++, Basic
+#+CATEGORIES: C++
+#+PROPERTY: header-args :exports both
+
+#+HTML: <!-- more -->
+
+** 函数
+*** 参数传递
+**** 值传递和引用传递
+当形参是引用类型时，对应的实参是被引用传递，函数是被传引用调用；当实参的值被拷贝
+给形参时，形参和实参是两个独立的对象，此时实参被值传递，函数是被传值调用
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  // 传引用参数，使用引用来避免对象拷贝，此时的作用与指针类似
+  void mul2(int &i) {
+    i *= 2;
+  }
+
+  int main(int argc, char *argv[])
+  {
+    int i = 3;
+    mul2(i);
+    cout << "i is " << i << endl;
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[66e61d26aa727fd2bf82f1dd32681de7129a876d]:
+: i is 6
+
+**** const 形参和实参
+和其它初始化过程一样，当用实参初始化形参时会忽略掉顶层 const，换句话说，形参的顶
+层 const 被忽略掉了。当形参有顶层 const 时，传给它常量对象或者非常量对象都是可以
+的
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  void fcn(const int i) {
+    // fcn 能够读取 i，但不能向 i 写值
+    cout << i << endl;
+  }
+
+  int main(int argc, char *argv[])
+  {
+    // 向 fcn 中传入常量或非常量都是合法的
+    const int a = 0;
+    int b = 1;
+    fcn(a);
+    fcn(b);
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[1d05bdc2a3456dde56b45918174ca0dd59ec67b4]:
+: 0
+: 1
+
+形参的初始化方法与变量的初始化方法是一样的，可以使用非常量初始化一个底层 const
+对象，但反过来不合法；同时一个普通的引用必须用同类型的对象初始化
+
+#+begin_src C++ :eval no
+  int i = 42;
+  const int *cp = &i;   // 正确：但是不能通过 cp 改变 i
+  const int &r = i;     // 正确：但是不能通过 r 改变 i
+  const int &r2 = 42;   // 正确：
+  int *p = cp;          // 错误：p 的类型和 cp 的类型不匹配
+  int &r3 = r;          // 错误：r3 的类型和 r 的类型不匹配
+  int &r4 = 42;         // 错误：不能用字面值初始化一个非常量引用
+
+  // 将同样的初始化规则应用到参数传递上可得
+  int i = 0;
+  const int ci = i;
+  string::size_type ctr = 0;
+  reset(&i);            // 调用形参类型是 int* 的 reset 函数
+  reset(&ci);           // 错误：不能用指向 const int 对象的指针初始化 int*
+  reset(i);             // 调用形参类型是 int& 的 reset 函数
+  reset(ci);            // 错误：不能把普通引用绑定到 const 对象 ci 上
+  reset(42);            // 错误：不能把普通变量绑定到字面值上
+  reset(ctr);           // 错误：类型不匹配，ctr 是无符号类型
+#+end_src
+
+函数形参应尽量使用常量引用，一方面会给调用者一种误导，即函数可以修改它的实参值。
+此外，使用引用而非常量引用也会极大地限制函数所能接受的实参类型。
+
+#+begin_src C++ :eval no
+  string::size_type find_char(string &s, char c,
+                              string::size_type &occurs);
+
+  // find_char 函数只能作用于 string 对象，传入字面值常量会发生错误
+  find_char("Hello, world!", 'o', ctr);
+#+end_src
+
+判断 string 对象中是否含有大写字母
+
+#+begin_src C++ :includes <iostream> <string>
+  using namespace std;
+
+  bool if_string_upper(const string &s) {
+    for (const auto &c : s) {
+      if (isupper(c))
+        return true;
+    }
+    return false;
+  }
+
+  int main(int argc, char *argv[])
+  {
+    const string s1("Hello, world!"); // string 常量对象作为参数合法
+    string s2("hello, code!");        // string 普通对象会自动隐藏形参的 const
+    const char *s3("hello, c++!");    // char * 常量指针会被转化为 string 对象
+
+    // *注意* << 的优先级高于 a? b: c 运算，此处必须有括号
+    cout << (if_string_upper(s1)? "Find": "Not find")
+         << " capital letters in " << s1 << endl;
+    cout << (if_string_upper(s2)? "Find": "Not find")
+         << " capital letters in " << s2 << endl;
+    cout << (if_string_upper(s3)? "Find": "Not find")
+         << " capital letters in " << s3 << endl;
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[df13e2473b001df178457bf0f50a4784ff5b65b0]:
+: Find capital letters in Hello, world!
+: Not find capital letters in hello, code!
+: Not find capital letters in hello, c++!
+**** 传递数组长度
+数组无法以值传递的方式使用数组参数，因此实际传递的是首元素的指针
+
+#+begin_src C++ :eval no
+  // 以下三种形式是相同的，每个函数手中有一个 const int* 类型的形参
+  void print(const int*);
+  void print(const int[]);
+  void print(const int[10]); // 此处的维度表示我们期望数组含有的元素个数，实际不一
+                             // 定
+#+end_src
+
+因数组是以指针的形式传递给函数的，因此函数无法知道数组长度的信息，有三种常用的技
+术用于传递长度信息
+
+#+begin_src C++ :eval no
+  // 第一种是要求数组本身包含一个结束标记
+  // 最典型的就是 C 风格的字符串，以及命令行参数传入的 argv
+  void print(const char *cp) {
+    if (cp)
+      while (*cp)
+        cout << *cp++;
+  }
+
+  // 第二种是模仿标准库规范，传递首尾指针
+  void print(const int *beg, const int *end) {
+    while (beg != end)
+      cout << *beg++ << endl;
+  }
+
+  // 第三种是显式传递一个表示数组大小的形参，也是 C 风格 API 常用的方法
+  void print(const int ia[], size_t size) {
+    for (size_t i = 0; i != size; ++i) {
+      cout << ia[i] << endl;
+    }
+  }
+#+end_src
+**** 使用引用传递数组
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  // 数组引用形参需要明确地指出数组的长度，并且必须与传入的数组长度一致
+  void print(int (&arr)[5]) {
+    for (auto ele: arr)
+      cout << ele << ", ";
+  }
+
+  int main() {
+    int arr[5] = {0, 1, 2, 3, 4};
+    print(arr);
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[97135e2be0f1c8d5297d236199a1b01f85c8f7ac]:
+: 0, 1, 2, 3, 4,
+
+**** 可变长参数列表
+C++ 11 新标准提供了两种主要的方法
+- 如果所有实参的类型相同，可以使用一命名为 =initializer_list= 的标准库类型
+- 如果实参的类型不同，可以编写可变参数模板
+
+同时 C++ 提供了一个与 C 函数交互的接口 =...= 形参，猜测类似于 C 中的可变长参数宏。
+此功能一般只用于与 C 函数交互，因为其对对象拷贝的支持不好
+
+#+begin_src C++ :eval no
+  initializer_list<T> lst;             // 默认初始化
+  initializer_list<T> lst{a, b, c...}; // lst 中的元素是对应初始值的副本，且为 const
+
+  lst2(lst);      // 拷贝或赋值不会拷贝元素，即浅拷贝
+  lst2 = lst;
+
+  lst.size();
+  lst.begin();
+  lst.end();
+#+end_src
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  void error_msg(error_code e, initializer_list<string> ls) {
+    cout << e.message() << ": ";
+    for (auto beg = ls.begin(); beg != ls.end(); ++beg)
+      cout << *beg << " ";
+  }
+
+  int main() {
+    // 用实参初始化形参
+    error_msg(error_code(), {"Hello", "world,", "hello", "C++!"});
+    return 0;
+  }
+#+end_src
+
+#+RESULTS[d0bd5433aeec73e0412f02aa54ef3b7678aae52c]:
+: Success: Hello world, hello C++!
+
+省略符形参只能出现在形参列表的最后一个位置，无外乎两种形式
+
+#+begin_src C++ :eval no
+  void foo(param_list, ...);
+  void foo(...);
+#+end_src
+**** 函数返回值
+返回值与与形参传递的方式完全一样，但一定注意变量的生命周期。 *不要返回局部对象的
+引用或指针，在函数返回时，栈上的局部对象也会析构*
+
+#+begin_src C++ :eval no
+  // 该函数严重错误
+  const string &foo() {
+    string ret;
+
+    if (!ret.empty())
+      return ret;     // 错误：试图返回局部变量的引用
+    else
+      return "Empty"; // 错误：字面值会被自动转换为一个局部临时 string 对象
+  }
+#+end_src
+
+函数的返回类型决定函数调用是否是左值，调用一个返回引用的函数得到左值，其它返回类
+型得到右值。
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  char &get_char(string &str, string::size_type ix) {
+    return str[ix];
+  }
+
+  int main() {
+    string s("Hello, world!");
+    cout << s << endl;
+    get_char(s, 0) = 'h';
+    cout << s << endl;
+  }
+#+end_src
+
+#+RESULTS[c157db33d331df0b30d3490590969290cd1af2b6]:
+: Hello, world!
+: hello, world!
+
+C++ 新标准规定，函数可以返回花括号包围的列表
+
+#+begin_src C++ :includes <iostream> <vector> <string>
+  using namespace std;
+
+  string join(const vector<string> &list) {
+    string ret;
+    for (auto s = list.begin(); s != list.end(); ++s)
+      ret += " " + *s + " ";
+    return ret;
+  }
+
+  // 此处不使用引用是为了也能传递字符串字面值，并自动转换为 string 对象
+  vector<string> process(const string s) {
+    return {"String", "is", s.empty()? "empty": s};
+  }
+
+  int main() {
+    vector<string> a, b;
+    a = process("");
+    b = process("Something");
+
+    cout << join(a) << endl;
+    cout << join(b) << endl;
+  }
+#+end_src
+
+#+RESULTS[9ebd8d546a03cd05615930a0447436d37c7e2bb4]:
+: String  is  empty 
+: String  is  Something
+**** 返回数组指针
+
+返回指向长度为 10 的 int 型数组的指针
+
+#+begin_src C++ :eval no
+  // C 风格的写法为
+  int (*func(int i))[10];
+
+  // 也可以使用别名简化
+  typedef int arrT[10];
+  arrT *func(int i);
+
+  // 使用 using，与 typedef 等价
+  using arrT = int[10];
+  arrT *func(int i);
+
+  // C++ 11 新标准中可以使用尾置返回类型
+  auto func(int i) -> int(*)[10];
+
+  // 使用 decltype
+  int odd[] = {1, 3, 5, 7, 9};
+  int even[] = {0, 2, 4, 6, 8};
+  decltype(odd) *arrPtr(int i) {
+    return (i % 2) ? &odd: &even;
+  }
+#+end_src
+
+使用尾置返回类型定义函数的一个 demo
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  auto mul2(int (&arr)[5]) -> int (*)[5] {
+    for (int &ele: arr)
+      ele *= 2;
+    return &arr;
+  }
+
+  void print(const int (*arr)[5]) {
+    for (const int &ele: *arr)
+      cout << ele << ", ";
+  }
+
+  int main() {
+    int arr[5] = {0, 1, 2, 3, 4};
+    print(mul2(arr));
+  }
+#+end_src
+
+#+RESULTS[f5feca4e91b843ae3b1b06134f2d5da2facd9938]:
+: 0, 2, 4, 6, 8,
+
+*** 函数重载
+如果同一作用域内的几个函数名字相同但形参列表不同，我们称之为重载（overloaded）函
+数。
+
+#+begin_src C++ :eval no
+  void print(const char *cp);
+  void print(const char *beg, const char *end);
+  void print(const int *beg, const int *end);
+
+  const char *s = "Hello, world!";
+  int j[] = {0, 1, 2, 3, 4};
+
+  print(s);
+  print(s, s + 5);
+  print(begin(j), end(j));
+#+end_src
+
+不允许定义两个参数完全相同但返回值不同的函数
+
+#+begin_src C++ :eval no
+  Record *lookup(const Account&);
+  bool lookup(const Account&);    // 错误
+#+end_src
+
+顶层 =const= 不影响传入函数的对象，因此一个拥有顶层 =const= 的形参无法与另一个没有顶
+层 =const= 形参的函数区分开来
+
+#+begin_src C++ :eval no
+  Record *lookup(Account);
+  Record *lookup(const Account);  // 重复声明
+
+  Record *lookup(Account*);
+  Record *lookup(Account* const);  // 重复声明
+#+end_src
+
+如果形参是某种类型的指针或引用，则通过区分其指向的是常量对象还是非常量对象可以实
+现函数重载，此时的 =const= 是底层的
+
+#+begin_src C++ :eval no
+  Record *lookup(Account&);
+  Record *lookup(const Account&);  // 新函数，作用于常量引用
+
+  Record *lookup(Account*);
+  Record *lookup(const Account*);  // 新函数，作用于常量指针
+#+end_src
+
+因为 =const= 不能转换成其它类型，所以只能把 =const= 对象（或指向 =const= 的指针）传递
+给 =const= 形参。相反的，非常量可以转换成 =const= ，所以上面的四个函数都能作用于非常
+量对象和指向非常量的指针
+
+**** =const_cast= 与重载
+
+=const_cast= 在重载函数的情景中很有用
+
+#+begin_src C++ :includes <iostream>
+  using namespace std;
+
+  // 比较两个 string 对象的长度，并返回较短的那个引用
+  const string &shorter_string(const string &s1, const string &s2) {
+    return s1.size() <= s2.size()? s1: s2;
+  }
+
+  // 利用 const_cast 定义一个非常量的版本
+  string &shorter_string(string &s1, string &s2) {
+    // 先将 s1 和 s2 转换为 const string 对象的引用
+    auto &r = shorter_string(const_cast<const string &>(s1),
+                             const_cast<const string &>(s2));
+    // 将返回值重新转换为 string 对象的引用
+    return const_cast<string &>(r);
+  }
+
+  int main() {
+    string s1("Hello, world!");
+    string s2("Hello, C++!");
+    const string cs1("Evil world.");
+    const string cs2("Evil C++.");
+    cout << "The shorter string is: " << shorter_string(s1, s2) << "\n";
+    cout << "The shorter string is: " << shorter_string(cs1, cs2) << "\n";
+  }
+#+end_src
+
+#+RESULTS[bc6a0cfdec7255b8bd840c10e5be0a473d500e69]:
+: The shorter string is: Hello, C++!
+: The shorter string is: Evil C++.
+**** 调用重载的函数
+把函数调用与一组重载函数中的某一个关联起来的过程叫做函数匹配，也叫做重载确定。
+
+调用重载函数时有三种可能的结果
+- 编译器找到一个与实参最佳匹配的函数，并生成调用函数的代码
+- 找不到任何一个函数与调用的实参匹配，此时编译器发出 =无匹配= 的错误信息
+- 有多于一个函数可以匹配，但都不是明显的最佳匹配，此时也将发生错误称为 =二义性调用=
+**** 重载与作用域
+重载发生在同一作用域，不同作用域的同名函数会发生掩盖（Mask）
+
+#+begin_src C++ :includes <iostream> <string> :eval no :file-name foo.cc
+  using namespace std;
+
+  string read();
+  void print(const string &);
+  void print(double);     // 在同一作用域中重载 print 函数
+
+  void foo(int ival) {
+    bool read = false;    // 新作用域，隐藏了外层的 read
+    string s = read();    // 错误：此作用域中 read 是一个布尔值
+    // 不好的习惯：通常来说，在局部作用域中声明函数不是一个好习惯
+    void print(int);      // 新作用域，隐藏了之前的 print
+    print("Value: ");     // 错误：void print(const string &) 被隐藏了
+    print(ival);          // 正确：当前 print(int) 可见
+  }
+#+end_src
+*** 默认实参
+
+#+begin_src C++ :eval no :file-name foo.cc
+  typedef string::size_type sz;
+  string screen(sz h= 24, sz w = 80, char background = '+');
+#+end_src
+
+#+RESULTS[81a7e511cdb4110c35fdb8e936f1d1fcab96eb7b]:
+
+**** 使用默认实参调用函数
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <sstream>
+  #include <string>
+
+  using namespace std;
+  typedef string::size_type sz;
+
+  string screen(sz h= 24, sz w = 80, char background = '+') {
+    ostringstream ostr;
+    ostr << "Height is " << h << ", width is " << w << ", background is " << background;
+    return ostr.str();
+  }
+
+  int main() {
+    cout << screen() << endl;              // 等价于 screen(24, 80, '+')
+    cout << screen(66) << endl;            // 等价于 screen(66, 80, '+')
+    cout << screen(66, 256) << endl;       // 等价于 screen(66, 256, '+')
+    cout << screen(66, 256, '#') << endl;  // 等价于 screen(66, 256, '#')
+  }
+#+end_src
+
+#+RESULTS[c72162c81c8d5d01e4774e221b3ec6cbf3efd79e]:
+: Height is 24, width is 80, background is +
+: Height is 66, width is 80, background is +
+: Height is 66, width is 256, background is +
+: Height is 66, width is 256, background is #
+
+**** 默认实参声明
+函数一般只声明一次，但多次声明同一个函数也是合法的。有一点需要注意，在给定的作用
+域中一个形参只能被赋予一次默认实参，函数的后续声明只能为之前那些没有默认值的形参
+添加实参，并且该形参右侧的所有形参必须都有默认值。
+
+#+begin_src C++ :eval no :file-name foo.cc
+  string screen(sz, sz, char = '+');
+  string screen(sz, sz, char = '*');      // 错误：重复声明
+  string screen(sz, sz = 80, char = '+'); // 正确：添加默认实参
+#+end_src
+
+**** 默认实参初始值
+局部变量不能作为默认实参，除此之外，只要表达式的类型能转换成形参所需的类型即可
+
+#+begin_src C++ :eval no :file-name foo.cc
+  // w, def 和 h 的声明必须出现在函数之外
+  sz w = 80;
+  char def = '+';
+  sz h();
+  string screen(sz = h(), sz = w, char = def);
+  string window = screen();  // 调用 screen(h(), 80, '+')
+
+  // 用作默认实参的名字在函数声明所在的作用域内解析，而这些名字的求值过程发生在函
+  // 数调用时
+  void foo() {
+    def = '*';              // 改变了默认实参徝
+    sz w = 100;             // 隐藏了外层定义的 w，但是没有改变默认值
+    window = screen();      // 调用 screen(h(), 80, '*')
+  }
+#+end_src
+*** 内联函数和 =constexpr= 函数
+函数入栈出栈有额外开销，使用 =inline= 关键字可以使函数在调用处展开。内联只是向编译
+器发出一个请求，行为取决于编译器本身。内联函数和 =constexpr= 函数通常定义在头文件
+中。
+
+#+begin_src C++ :eval no :file-name foo.cc
+  inline const string &
+  shorterString(const string &s1, const string &s2) {
+    return s1.size() <= s2.size()? s1: s2;
+  }
+#+end_src
+
+=constexpr= 函数是指能用于常量表达式的函数，函数的返回值和所有形参都必须是字面值类
+型，函数体中必须有且只有一条 return 语句
+
+#+begin_src C++ :eval no :file-name foo.cc
+  constexpr int new_sz() { return 42; }
+  constexpr int foo = new_sz();  // 正确：foo 是一个常量表达式
+#+end_src
+
+在执行初始化过程中，编译器把对 =constexpr= 函数的调用替换成其结果值，为能在编译过
+程中随时展开， =constexpr= 函数被隐式地指定为内联函数。
+
+#+begin_src C++ :eval no :file-name foo.cc
+  // 如果 arg 是常量表达式，则 scale(arg) 也是常量表达式
+  constexpr size_t scale(size_t cnt) { return new_sz() * cnt; }
+
+  // 当 scale 的实参是常量表达式时，它的返回值也是常量表达式，反之则不然
+  int arr[scale(2)];   // 正确：scale(2) 是常量表达式
+  int i = 2;           // i 不是常量表达式
+  int arr2[scale(i)];  // 错误：scale(i) 不是常量表达式
+#+end_src
+*** TODO 函数匹配
+该部分内容还未总结
