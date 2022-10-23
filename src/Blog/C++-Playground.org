@@ -2420,3 +2420,298 @@ Delete Node(6).
 
 #+RESULTS[e3151fd1d0c995b1577fdcce69797d5ac184fb87]:
 : [77, 3.14, Hello, world!]
+** 智能指针与自定义 =deleter=
+
+在使用智能指针时，我们可以自己指定使用的 =deleter= 删除器来指定删除行为
+
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <vector>
+  #include <string>
+  #include <memory>
+
+  int main()
+  {
+    // 创建一个指向 string 的智能指针，同时指定 deleter
+    std::shared_ptr<std::string> nico(new std::string("Nico"),
+                                      [] (std::string* p) {
+                                        std::cout << "delete " << *p << std::endl;
+                                      });
+    // 创建一个名字顺序列表
+    std::vector<std::shared_ptr<std::string>> names;
+    // 将名字指针加入列表
+    names.push_back(nico);
+    names.push_back(nico);
+
+    nico = nullptr;
+  }
+#+end_src
+
+#+RESULTS[9b97756aef6540e0dead77858c566b5cec53be4d]:
+: delete Nico
+
+另一种情况是在处理 =Array= 时， =shared_ptr= 默认的删除器是 =delete= 而不是 =delete[]=
+，当处理 =Array= 需要传入自定义的删除器
+
+#+begin_src C++ :file-name foo.cc :eval no
+  // 能通过编译但实际会导致不完全释放
+  // std::shared_ptr<int> p(new int[10]);
+  // 构造 shared_ptr 的同时指定删除器
+  std::shared_ptr<int> p(new int[10], [] (int* p) { delete[] p; });
+  // 或者使用为 =unique_ptr= 而提供的辅助函数
+  std::shared_ptr<int> q(new int[10], std::default_delete<int[]>());
+
+  // 对于 unique_ptr 我们可以只提供对应元素的类型甚至不用指明长度
+  std::unique_ptr<int[]> p(new int[10]);
+  // 但是对于 shared_ptr 就无法通过编译
+  // std::shared_ptr<int[]> p(new int[10]);
+
+  // 另外，对于 unique_ptr 在指明删除器时需要指明第一个模板参数
+  std::unique_ptr<int, void(*)(int*)> p(new int[10], [] (int* p) { delete[] p; });
+#+end_src
+** Type Trait
+#+begin_src C++ :file-name foo.cc
+  #include <iostream>
+  #include <type_traits>
+
+  // 标准库中所有的类型判别式的产出类型都特化自一个叫 =std::integral_constant= 的模板
+  template<typename T, T val>
+  struct integral_constant
+  {
+    static constexpr T value = val;
+    typedef T value_type;
+    typedef integral_constant<T, value> type;
+    constexpr operator value_type() { return value; }
+  };
+
+  typedef integral_constant<bool, true> true_type;
+  typedef integral_constant<bool, false> false_type;
+
+  // 定义一个 Person 类
+  class Person { std::string name; };
+
+  // 自定义一个 type predicate
+  template<typename T>
+  struct is_Person
+  {
+    static constexpr bool value = std::is_same<Person, T>::value;
+    typedef is_Person<T> type;
+  };
+
+  int main()
+  {
+    std::cout << is_Person<Person>::value << std::endl;
+  }
+#+end_src
+
+#+RESULTS[1885513763283a050b828d354c4f098df6584ea5]:
+: 1
+** 辅助函数
+*** =std::max=
+
+#+begin_src C++ :file-name foo.cc
+  #include <algorithm>
+  #include <iostream>
+
+  // 在 std::max(const T&, const T&) 外面加了打印包装
+  template<typename T>
+  const T& max(const T& a, const T& b)
+  {
+    std::cout << "Use std::max(const T&, const T&);" << std::endl;
+    return std::max(a, b);
+  }
+
+  // 在 std::max(std::initializer_list<T>) 外面加了打印包装
+  template<typename T>
+  T max(std::initializer_list<T> initList)
+  {
+    std::cout << "Use std::max(std::initializer_list<T>);" << std::endl;
+    return std::max(initList);
+  }
+
+  template<typename T1, typename T2>
+  auto max(const T1& a, const T2& b) -> std::common_type_t<T1, T2>
+  {
+    std::cout << "Use max(const T1& a, const T2& b);" << std::endl;
+    return a > b ? a : b;
+  }
+
+  // 实现一个变参的 max 函数模板，注意与初始化参数列的区别
+  template<typename Arg, typename... Args>
+  auto max(Arg arg, Args... args)
+  {
+    std::cout << "Use auto max(Arg arg, Args... args);" << std::endl;
+    return arg > max(args...) ? arg : max(args...);
+  }
+
+  int main()
+  {
+    std::cout << max<int>(1, 2) << std::endl;
+    std::cout << max<int>({1, 2, 3}) << std::endl;
+    std::cout << max<int, float, double>(1, 2.2, 3.14) << std::endl;
+  }
+#+end_src
+
+#+RESULTS[3ecf6f916154833ba56810b6e10618cfd1b0dba6]:
+: Use std::max(const T&, const T&);
+: 2
+: Use std::max(std::initializer_list<T>);
+: 3
+: Use auto max(Arg arg, Args... args);
+: Use max(const T1& a, const T2& b);
+: Use max(const T1& a, const T2& b);
+: 3.14
+
+*** =std::swap=
+
+标准库内有不同的 =std::swap= 重载版本，你也可以重载自己的版本
+
+#+begin_src C++ :file-name foo.cc
+  #include <utility>
+  #include <iostream>
+
+  // 在 std::swap(T&, T&b) 外面加了打印包装
+  template<typename T>
+  inline void swap(T& a, T& b)
+  {
+    std::cout << "Use std::swap(T&, T&b);" << std::endl;
+    std::swap(a, b);
+  }
+
+  // 在 std::swap(T (&a)[N], T (&b)[N]) 外面加了打印包装
+  template<typename T, size_t N>
+  void swap(T (&a)[N], T (&b)[N])
+  {
+    std::cout << "Use std::swap(T (&a)[N], T (&b)[N]);" << std::endl;
+    std::swap(a, b);
+  }
+
+  int main()
+  {
+    int ia = 1;
+    int ib = 2;
+    int iarra[3] = {1, 2, 3};
+    int iarrb[3] = {4, 5, 6};
+
+    swap(ia, ib);
+    swap(iarra, iarrb);
+  }
+#+end_src
+
+#+RESULTS[5fc1649953ebc8132c745ae60910fa87df465375]:
+: Use std::swap(T&, T&b);
+: Use std::swap(T (&a)[N], T (&b)[N]);
+
+*** =ratio<>= 编译期分数运算
+
+=std::ratio= 可以实现编译期约分
+
+#+begin_src C++ :file-name foo.cc
+  #include <ratio>
+  #include <iostream>
+
+  int main()
+  {
+    // 定义一个分数类型
+    using FiveThirds = std::ratio<5, 3>;
+    std::cout << FiveThirds::num << "/" << FiveThirds::den << std::endl;
+
+    // 分数会在编译期约分
+    using Two = std::ratio<30, 15>;
+    std::cout << Two::num << "/" << Two::den << std::endl;
+
+    // 两分数相加
+    using ElevenThirds = std::ratio_add<FiveThirds, Two>;
+    std::cout << ElevenThirds::num << "/" << ElevenThirds::den << std::endl;
+
+    // 使用预定义的 ratio 单位
+    std::cout << "1 TB = " << std::tera::num << " Bytes." << std::endl;
+  }
+#+end_src
+
+#+RESULTS[7ca4efd47bb21f94e6677aae4de6b07b26fecfd9]:
+: 5/3
+: 2/1
+: 11/3
+: 1 TB = 1000000000000 Bytes.
+*** =chrono=
+
+=chrono= 库中常用的 duration 表示
+
+#+begin_src C++ :file-name foo.cc :eval no
+  #include <chrono>
+
+  int main()
+  {
+    // chrono 使用一个数值和一个 tick 大小表示一个 duration
+    std::chrono::duration<int> twentySeconds(20);
+    std::chrono::duration<double, std::ratio<60>> halfMinute(0.5);
+    std::chrono::duration<long, std::ratio<1, 1000>> oneMillisecond(1);
+
+    // 或者使用 chrono 库中定义的常用时间单位
+    std::chrono::seconds tenSeconds(10);
+    std::chrono::hours aDay(24);
+  }
+#+end_src
+
+**** Duration 的算数运算
+
+此处时间段的算数计算与隐式转换规则
+1. 时间段可进行加减乘除与取模等算术运算
+2. duration 可隐式转换为更精确的单位（tick 更小），但反之不行。这也就是为什么要
+   将 =remain= 变量定义为 =seconds= 类型的原因
+
+#+begin_src C++ :file-name foo.cc
+  #include <chrono>
+  #include <iostream>
+
+  using namespace std::chrono;
+
+  int main()
+  {
+    // 计算一天有多少秒
+    seconds secondsInADay(hours(24));
+    std::cout << secondsInADay.count() << " seconds in a day." << std::endl;
+
+    // 计算一天过去 1 小时 15 分钟 35 秒后还剩余多少时间
+    hours aDay(24);
+    seconds remain(aDay);
+    remain = remain - hours(1) - minutes(15) - seconds(35);
+    std::cout << remain.count() << " seconds remains." << std::endl;
+  }
+#+end_src
+
+#+RESULTS[7c94c26fbb8e332ced44c3b22fdc755cadd94f33]:
+: 86400 seconds in a day.
+: 81865 seconds remains.
+
+**** Duration 的其它操作
+
+上面代码块中的 =std::chrono::duration::count= 正是 Duration 的一个操作，用于返回一
+个时间段对应 tick 单位的计数，可利用它实现打印一个 Duration
+
+#+begin_src C++ :file-name foo.cc
+  #include <chrono>
+  #include <iostream>
+
+  using namespace std::chrono;
+
+  // 重载 std::chrono::duration 的 << 运算符
+  template<typename C, typename R>
+  std::ostream& operator<<(std::ostream& os, duration<C, R> d)
+  {
+    return os << "[" << d.count() << " of " << R::num << "/" << R::den << "]";
+  }
+
+  int main()
+  {
+    milliseconds d(42);
+    std::cout << d << std::endl;
+    hours day(24);
+    std::cout << day << std::endl;
+  }
+#+end_src
+
+#+RESULTS[c56d18bf1b563aedb870b7172302e81c5ff3b471]:
+: [42 of 1/1000]
+: [24 of 3600/1]
