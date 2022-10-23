@@ -1,15 +1,34 @@
-<ul class="menu">
-  <nav class="home">Cycoe@Home</nav>
-  <li><a href="/">Index</a></li>
-  <li><a href="/Photo/index.html">Photo</a></li>
-  <li><a href="/about.html">About</a></li>
-</ul>
+<div id="top-container">
+  <a id="site-name" href="/">Cycoe<span id="at-home">@Home</span></a>
+  <div id="banner">Keep It Simple Stupid</div>
+</div>
+
+<div id="top-nav">
+  <div id="nav-wrapper">
+    <div class="nav-btn" id="toc-wrapper">
+      <span class="vertical-align">Ξ</span>
+      <div id="go-top">
+        <a href="javascript:window.scrollTo(0,0)" style="color: black !important; border-bottom: none !important;" class="tooltip" title="Go to the top of the page">
+        <span class="top">&uarr;</span>
+        </a></div>
+    </div>
+    <div id="nav-left-wrapper">
+      <a class="nav-btn" id="photo-entry" href="/Photo/index.html" title="Photo">Photo</a>
+      <a class="nav-btn" id="about-entry" href="/about.html" title="About Me">About</a>
+      <div id="nav-title-wrapper">
+        <span id="nav-title">%s</span>
+        <span id="nav-date">%s</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- The Modal -->
 <div id="img-modal" class="modal">
   <!-- The Close Button -->
   <span class="close">&times;</span>
   <!-- Modal Content (The Image) -->
-  <img class="modal-content" id="modal-img">
+  <img class="modal-content" id="img-wrapper">
   <!-- Modal Caption (Image Text) -->
   <div id="caption"></div>
 </div>

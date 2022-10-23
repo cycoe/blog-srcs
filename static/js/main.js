@@ -24,25 +24,19 @@ $(document).ready(() => {
     // ---------------------------------
     $('.src').each(function() {
         var str = $(this)[0].className.split(' src-')[1];
-        console.log(str)
-        $('<span class="code-type-flag">' + str + '</span>').prependTo($(this))
-    })
+        $('<span class="code-type-flag">' + str + '</span>').prependTo($(this));
+    });
 
     // Image zoom.
     // ---------------------------------
     $('img').each(function(idx, ele) {
         var modal = document.getElementById('img-modal');
-        var modalImg = document.getElementById('modal-img');
-
-        // $(this).click(function() {
-        //     modal.style.display = "block";
-        //     modalImg.src = ele.src;
-        // })
+        var imgWrapper = document.getElementById('img-wrapper');
 
         ele.onclick = function () {
             modal.style.display = "block";
-            modalImg.src = ele.src;
-        }
+            imgWrapper.src = ele.src;
+        };
 
         // Get the <span> element that closes the modal
         var closeBtn = document.getElementsByClassName("close")[0];
@@ -50,9 +44,57 @@ $(document).ready(() => {
         // When the user clicks on <span> (x), close the modal
         closeBtn.onclick = function() {
             modal.style.display = "none";
+        };
+    });
+
+    // Move the table-of-contents to the toc-wrapper.
+    // ---------------------------------
+    var toc = document.getElementById('table-of-contents');
+    if (toc != null) {
+        document.getElementById('toc-wrapper').appendChild(toc);
+    }
+
+    // Listen to scroll action, the handle with the navigation bar.
+    // ---------------------------------
+    // Get the offset of navigation bar
+    var navBar = document.getElementById('top-nav');
+    var navBarOffset = navBar.offsetTop;
+    // Get the offset of content
+    var content = document.getElementById('content');
+    var contentOffset = content.offsetTop;
+
+    // TODO: Get all element for once
+    // Elements to add to sticky class
+    var eleToSticky = ['nav-wrapper',  'preamble'];
+    // Elements to add to title-action class
+    var eleToTitle = ['nav-title-wrapper', 'photo-entry', 'about-entry'];
+
+    function handleNavBar() {
+        if (window.pageYOffset >= navBarOffset) {
+            navBar.classList.add("sticky");
+            eleToSticky.map(function(ele) {
+                document.getElementById(ele).classList.add('sticky');
+            });
+        } else {
+            navBar.classList.remove("sticky");
+            eleToSticky.map(function(ele) {
+                document.getElementById(ele).classList.remove('sticky');
+            });
         }
-    })
-})
+        if (window.pageYOffset >= contentOffset) {
+            eleToTitle.map(function(ele) {
+                document.getElementById(ele).classList.add('title-action');
+            });
+        } else {
+            eleToTitle.map(function(ele) {
+                document.getElementById(ele).classList.remove('title-action');
+            });
+        }
+    }
+
+    handleNavBar();
+    window.onscroll = function() {handleNavBar();};
+});
 
 function browserRedirect() {
     let sUserAgent = navigator.userAgent.toLowerCase();
@@ -71,3 +113,4 @@ function browserRedirect() {
         return 'PC';
     }
 }
+
