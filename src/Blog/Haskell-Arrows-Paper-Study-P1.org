@@ -1,0 +1,97 @@
+#+TITLE: Haskell Arrows 库论文研读——第一弹
+#+DATE: <2022-10-23 Sun 15:17>
+#+LAYOUT: post
+#+TAGS: Haskell
+#+CATEGORIES: Haskell
+
+#+HTML: <!-- more -->
+
+** Point-free 编程
+编写一个统计字符串中指定单词的个数的函数
+#+begin_src haskell
+  count w = length . filter (==w) . words
+  count "hello" "hello world. hello cycoe."
+#+end_src
+
+#+RESULTS:
+: 2
+
+如果要实现从一个文件读取字符串，统计单词数并输出到终端，我们尝试在两侧
+加上 =print= 和 =readFile=
+#+begin_src haskell
+  count w = print . length . filter (==w) . words . readFile
+#+end_src
+
+#+RESULTS:
+: <interactive>:33:51-58: error:
+:     • Couldn't match type: IO String
+:                      with: [Char]
+:       Expected: FilePath -> String
+:         Actual: FilePath -> IO String
+:     • In the second argument of ‘(.)’, namely ‘readFile’
+:       In the second argument of ‘(.)’, namely ‘words . readFile’
+:       In the second argument of ‘(.)’, namely
+:         ‘filter (== w) . words . readFile’
+
+但是行不通，因为 =print= 和 =readFile= 带入了副作用，我们无法通过函数
+组合直接去组合他们，但是我们可以借助 Monad 去进行绑定
+
+#+begin_src haskell :eval no
+  count w = (>>= print) .
+	    liftM (length . filter (==w) . words) .
+	    readFile
+#+end_src
+
+在 Haskell 中，副作用使用 =a -> IO b= 表示，可以使用以下类型同构表示
+
+#+begin_src haskell :eval no
+  type Kleisli m a b = a -> m b
+#+end_src
+
+文件读取与输出函数可以进行如下重构
+
+#+begin_src haskell :eval no
+  readFile :: Kleisli IO String String
+  print :: Show a => Kleisli IO a ()
+#+end_src
+
+那么函数组合可以定义为如下函数
+
+#+begin_src haskell :eval no
+  (>>>) : Monad m => Kleisli m a b -> Kleisli m b c -> Kleisli m a c
+  (f >>> g) a = do b <- f a
+		   g b
+#+end_src
+
+打印文件的函数可由 =>>>= 进行组合
+
+#+begin_src haskell :eval no
+  printFile = readFile >>> print
+#+end_src
+
+和 Monad 的 =return= 函数类似， Kleisli 也有对应接口 =arr= 将一个普通
+函数包装成 Kleisli 类型
+
+#+begin_src haskell :eval no
+  arr :: Monad m => (a -> b) -> Kleisli m a b
+  arr f = return . f
+#+end_src
+
+使用这些组合子组合副作用和纯函数
+
+#+begin_src haskell :eval no
+  count w = readFile >>>
+	    arr words >>> arr (filter (==w)) >>> arr length >>>
+	    print
+#+end_src
+
+** Arrow 类型类
+Arrow 类型类表示实现了 =arr= 和 =>>>= 接口的类型
+
+#+begin_src haskell :eval no
+  class Arrow arr where
+    arr :: (a -> b) -> arr a b
+    arr = id
+    (>>>) :: arr a b -> arr b c -> arr a c
+    (>>>) = flip (.)
+#+end_src
