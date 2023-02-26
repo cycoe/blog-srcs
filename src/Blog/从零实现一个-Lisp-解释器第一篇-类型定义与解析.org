@@ -1,0 +1,57 @@
+#+TITLE: 从零实现一个 Lisp 解释器第一篇－－类型定义与解析
+#+DATE: <2023-02-26 Sun 22:21>
+#+LAYOUT: post
+#+TAGS: Haskell, Lisp
+#+CATEGORIES: Haskell
+
+** 前言
+又开一个新坑，这次是使用 Haskell 从零开始写一个 Lisp 解释器，将支持基
+础类型和函数定义求值等功能。因为只是学习用途所以暂时不考虑性能，后面也
+会通过连载的方式对功能进行逐步完善。
+
+** 为什么不是 Hello world ？
+对于 Python 或 C++ 等语言，一般都是通过写一个 Hello world 程序来作为入
+门。但 Haskell 不同，当你写出一个输出 Hello world 的程序时，其实你已经
+用到了 IO Monad 这种从未见过的概念，虽然你在使用时对它并不了解。所以对
+于 Haskell 来说，写一个 Hello world 程序在对程序原理的理解上并没有比写
+一个 Lisp 解释器简单太多。
+
+** 定义内置类型
+我们首先从最简单的情况入手，作为一个解释器至少要支持整数和符号。Lisp
+中的符号与命令式语言中的变量相对应，符号可以理解为从一个字符串到表达式
+的绑定。那么可以定义如下的代数结构表示 LispExpr，即 Lisp 表达式可以是
+一个整数或者一个符号。
+
+#+begin_src haskell
+  data LispExpr = LispInt Integer
+		| LispSymbol String
+#+end_src
+
+那么我们就可以通过 =LispInt 10= 或者 =LispSymbol "a"= 这种方式构造一个
+Lisp 表达式，这也成为后续操作的基础。
+
+** 解析输入并构造表达式
+
+解释器的运行过程可以分为几个步骤：
+1. 读取用户输出并解析为 Lisp 表达式（parse）
+2. 对 Lisp 表达式求值（eval）
+3. 输出求值结果（show）
+
+用户输入是整个运行过程的源头，我们需要针对整型和符号定义对应的解析器。
+这里我们使用 Parsec 库定义组合子进行解析操作。
+
+#+begin_src haskell
+  intP :: GenParser Char st LispExpr
+  intP = LispInt <$> do
+    sign <- option "" (string "-")
+    num <- many1 digit
+    return . read $ sign ++ num
+
+  symbolP :: GenParser Char st LispExpr
+  symbolP = LispSymbol <$> do
+    f <- firstAllowed
+    r <- many $ firstAllowed <|> digit
+    return (f:r) where
+      firstAllowed = oneOf "+-*/" <|> letter
+#+end_src
+
