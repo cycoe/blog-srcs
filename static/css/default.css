@@ -407,6 +407,10 @@ pre:hover {
 }
 
 .code-type-flag {
+  display: none;
+}
+
+pre:hover .code-type-flag {
   color: #666;
   position: absolute;
   top: 0;
@@ -418,10 +422,6 @@ pre:hover {
   animation-name: fade-in;
   animation-duration: 0.6s;
   /* z-index: -1; */
-}
-
-pre:hover .code-type-flag {
-  display: none;
 }
 
 blockquote {
