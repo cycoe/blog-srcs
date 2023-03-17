@@ -1,3 +1,4 @@
+
 /******************************************************
  * I copied these styles from markdotto.com, who is
  * the creator of bootstrap, and I also did some
@@ -399,31 +400,25 @@ pre {
   /* white-space: pre-wrap; */
   /* word-break: break-all; */
   /* word-wrap: break-word; */
-  overflow: hidden;
+  overflow: auto;
   position: relative;
 }
 pre:hover {
-  overflow: visible;
+  overflow: auto;
 }
 
-.code-type-flag {
-  display: none;
-}
 .code-type-flag {
   display: block;
   color: #666;
   background: #b7c7ff;
-  position: absolute;
+  position: relative;
+  top: 0;
+  right: 0;
   text-align: center;
-  top: -15px;
-  right: 10px;
-  margin: 0px;
+  margin: 0px 0px 5px 0px;
   padding: 0px 5px 0px 5px;
   border: 2px solid #b7c7ff;
   border-radius: 5px;
-  animation-name: fade-in;
-  animation-duration: 0.3s;
-  /* z-index: -1; */
 }
 
 blockquote {
