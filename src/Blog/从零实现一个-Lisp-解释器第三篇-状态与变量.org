@@ -1,0 +1,268 @@
+#+TITLE: 从零实现一个 Lisp 解释器第三篇－状态与变量
+#+DATE: <2023-03-04 Sat 10:44>
+#+LAYOUT: post
+#+TAGS: Haskell, Lisp
+#+CATEGORIES: Haskell
+
+** 本系列链接
+- [[file:从零实现一个-Lisp-解释器第一篇-类型定义与解析.org]]
+- [[file:从零实现一个-Lisp-解释器第二篇-函数.org]]
+- [[file:从零实现一个-Lisp-解释器第三篇-状态与变量.org]]
+- [[file:从零实现一个-Lisp-解释器第四篇-lambda-函数与控制语句.org]]
+
+完整代码地址：[[https://github.com/cycoe/lisp-interpretor]]
+
+参考博客：[[https://www.defmacro.org/ramblings/lisp-in-haskell.html]]
+
+** 什么是状态？
+在上一篇中，我们已经实现了 LispFunc 和 LispList 对函数进行表示和调用。
+但这种调用关系其实存在一种限制，我们只能调用 symbols 里面定义好的函数
+和变量，无法在函数运行过程中向 symbols 中添加变量或者对其中的变量进行
+修改。这也就意味着我们每次对相同的表达式进行求值一定得到相同的结果。
+
+#+begin_src lisp
+  (+ a 1 2 3)
+  (+ a 1 2 3)
+#+end_src
+
+假设上式中的 =a= 定义在 symbols 中并且值为 1，那么我们不管在何时何地对
+=(+ a 1 2 3)= 进行求值结果一定为 7。也就是说我们目前实现的解释器是无状
+态的，特定的输入一定对应着特定的输出，也就没有变量。没有变量也就意味着
+无法处理外部世界的输入，而与外部世界交互正是程序最重要的功能之一。
+
+** 实现状态
+我们可以将 Lisp 程序中的状态想象为一个始终伴随表达式求值过程的一个盒子，
+每一次求值过程都有可能会对盒子中的内容进行查看（读取）或修改。 一种实
+现方式就是在每次求值时将状态也作为参数传入，再将新的状态作为输出的一部
+分返回，作为下一次求值的输入。那么我们可以这样改写我们的 Lisp 表达式定
+义和 =eval= 函数。
+
+首先我们对 LispFunc 类型的签名进行修改，让它能接受一个状态和若干个参数，
+并且返回由新的状态和求值后结果组成的元组。这里我们新增了一个 LispQuot
+类型，这个类型和 LispFunc 具有完全一样的类型签名。但它的特殊之处在于我
+们在对这类函数进行调用时不预先对参数进行求值，这将在后面我们实现一些特
+殊函数时用到。
+
+#+begin_src haskell
+  data LispExpr = LispInt Integer
+		| LispSymbol String
+		| LispFunc (Context -> [LispExpr] -> (Context, LispExpr))
+		| LispQuot (Context -> [LispExpr] -> (Context, LispExpr))
+		| LispList [LispExpr]
+#+end_src
+
+=eval= 函数也需要做一些调整，LispInt、LispSymbol、LispFunc 和 LispQuot
+类型在求值时不会对状态做修改，因此直接返回原始状态即可。LispList 在求
+值时根据调用的函数是 LispFunc 还是 LispQuot 类型分别进行处理。
+
+#+begin_src haskell
+  eval :: Context -> LispExpr -> (Context, LispExpr)
+  eval ctx (LispInt i)        = (ctx, LispInt i)
+  eval ctx (LispSymbol s)     = (ctx, ctx Map.! s)
+  eval ctx (LispFunc f)       = (ctx, LispFunc f)
+  eval ctx (LispQuot f)       = (ctx, LispQuot f)
+  eval ctx (LispList (x:xs))  =
+    let (new_ctx, fn) = eval ctx x
+	(last_ctx, eval_args) = mapAccumL eval new_ctx xs
+	apply (LispFunc f) = f last_ctx eval_args
+	apply (LispQuot f) = f new_ctx xs
+	apply _            = undefined
+    in  apply fn
+#+end_src
+
+同样的生成加减乘除算符的函数也需要将状态作为参数，虽然它不会对状态做修
+改，只需将状态作为参数传入井原封不动地传出即可。
+
+#+begin_src haskell
+  intBinaryOp :: (Integer -> Integer -> Integer) -> Context -> [LispExpr] -> (Context, LispExpr)
+  intBinaryOp op ctx (x:xs) = (ctx, LispInt $ foldl op (unwrapInt x) (map unwrapInt xs)) where
+    unwrapInt :: LispExpr -> Integer
+    unwrapInt (LispInt i) = i
+    unwrapInt _           = undefined
+#+end_src
+
+** 为解释器实现一个 Shell
+在为我们的解释器增加变量的功能之前，我们需要先为它实现一个 Shell。这个
+Shell 将是我们和 Lisp 程序进行交互的地方，同时它也将承担起在整个交互过
+程中保存状态的角色，让我们可以免于手动进行状态传递。
+
+#+begin_src haskell
+  shell :: Context -> InputT IO ()
+  shell ctx = do
+    mline <- getInputLine "lisp> "
+    case mline of
+      Nothing   -> shell ctx
+      Just line -> case runParser lispP "" "Lisp interpretor" line of
+	Left error -> outputStrLn $ show error
+	Right expr -> do
+	  outputStrLn (show (ctx', expr'))
+	  shell ctx' where
+	    (ctx', expr') = eval ctx expr
+#+end_src
+
+这里的关键在于每当我们输入一个合法的 Lisp 表达式时，我们对表达式进行求
+值，将得到的新状态和结果打印出来，并将新状态重新传给 shell 函数开始下
+一次输入。 =lisp>= 是我们定义的 Lisp Shell 提示符，我们在其中输入 =(+
+1 2 3)= 会得到结果为 6。
+
+#+begin_src haskell
+  ghci> runInputT defaultSettings (shell symbols)
+  lisp> (+ 1 2 3)
+  (fromList [("*",<function>),("+",<function>),("-",<function>),("/",<function>)],6)
+#+end_src
+
+** 设置变量
+万事俱备，我们可以简单地实现设置变量的函数。
+
+#+begin_src haskell
+  lispSet :: Context -> [LispExpr] -> (Context, LispExpr)
+  lispSet ctx [LispSymbol s, expr] = (Map.insert s expr ctx, expr)
+
+  symbols :: Context
+  symbols = Map.fromList
+    [ ("set", LispQuot lispSet)
+    , ("+", LispFunc (intBinaryOp (+)))
+    , ("-", LispFunc (intBinaryOp (-)))
+    , ("*", LispFunc (intBinaryOp (*)))
+    , ("/", LispFunc (intBinaryOp div))
+    ]
+#+end_src
+
+这个函数将传入的 LispSymbol 和表达式作为键值对插入到状态中，并将新的状
+态和表达式返回。我们可以试一下设置变量并使用变量进行求值。
+
+#+begin_src haskell
+  lisp> (set a 1)
+  (fromList [("*",<function>),("+",<function>),("-",<function>),("/",<function>),("a",1),("set",<special-form>)],1)
+  lisp> (+ a 10)
+  (fromList [("*",<function>),("+",<function>),("-",<function>),("/",<function>),("a",1),("set",<special-form>)],11)
+#+end_src
+
+我们成功将变量 =a = 1= 保存到了状态中，现在我们得到一个可以保存变量的
+Lisp 解释器！
+
+** 使用状态单子管理状态
+我们的解释器已经支持管理状态，但是所有函数在定义时都需要显式地将状态传
+入并将新状态返回，导致很多冗余代码且不利于维护。Haskell 中有定义了单子
+（Monad）类型类用于表示这种后一步计算依赖前一步结果的计算模式，State
+单子就是其中的一个实例，用于对状态进行管理。这里我们使用 State Monad
+Transformer 来定义我们的状态，方便后续的异常处理流程。
+
+#+begin_src haskell
+  data LispExpr = LispInt Integer
+		| LispSymbol String
+		| LispFunc ([LispExpr] -> LispState)
+		| LispQuot ([LispExpr] -> LispState)
+		| LispList [LispExpr]
+
+  type Context   = Map.Map String LispExpr
+  type LispState = StateT Context IO LispExpr
+#+end_src
+
+上面我们定义了从 IO 单子基础上变换出的 =LispState= 状态单子类型，并且
+将 LispFunc 和 LispQuot 构造函数的类型做了修改。同样的 =eval= 函数也需
+要返回我们定义的状态单子，并且我们可以看到经过改造后我们的 =apply= 函
+数比之前更加精简。
+
+#+begin_src haskell
+  eval :: LispExpr -> LispState
+  eval (LispInt i)        = return $ LispInt i
+  eval (LispFunc f)       = return $ LispFunc f
+  eval (LispQuot f)       = return $ LispQuot f
+  eval (LispSymbol s)     = flip (Map.!) s <$> get
+  eval (LispList (x:xs))  = do
+    fn <- eval x
+    apply fn where
+      apply (LispQuot f) = f xs
+      apply (LispFunc f) = mapM eval xs >>= f
+#+end_src
+
+我们自己定义的内置函数也需要修改类型签名。
+
+#+begin_src haskell
+  lispSet :: [LispExpr] -> LispState
+  lispSet [LispSymbol s, expr] = do
+    modify $ Map.insert s expr
+    return expr
+
+  intBinaryOp :: (Integer -> Integer -> Integer) -> [LispExpr] -> LispState
+  intBinaryOp op (x:xs) = return . LispInt $ foldl op (unwrapInt x) (map unwrapInt xs) where
+    unwrapInt :: LispExpr -> Integer
+    unwrapInt (LispInt i) = i
+#+end_src
+
+最后我们在 shell 函数调用 eval 的地方也要做一些修改，使用 =runStateT=
+对整个状态进行求值。
+
+#+begin_src haskell
+    shell :: Context -> InputT IO ()
+    shell ctx = do
+      mline <- getInputLine "lisp> "
+      case mline of
+	Nothing   -> shell ctx
+	Just line -> case runParser lispP "" "Lisp interpretor" line of
+	  Left error -> outputStrLn $ show error
+	  Right expr -> do
+	    (expr', ctx') <- liftIO $ runStateT (eval expr) ctx
+	    outputStrLn (show (ctx', expr'))
+	    shell ctx'
+#+end_src
+
+** 异常处理
+使用 StateT 单子进行状态管理的另一大好处就是易于编写异常处理的代码，只
+需要重新定义一个 =ExceptT= 异常单子变换，井使用它替换 StateT 单子中的
+IO 即可。
+
+#+begin_src haskell
+  type LispError = ExceptT String IO
+  type LispState = StateT Context LispError LispExpr
+#+end_src
+
+在 eval 函数中我们可以对之前没有处理的异常做一些处理，比如当我们对
+List 进行求值并且 List 中的第一个表达式无法被求值为 LispFunc 或
+LispQuot 这种函数类型时，我们提示用户无法将该表达式求值为函数；当用户
+对空列表进行求值时，我们同样可以抛出异常方便定位问题。
+
+#+begin_src haskell
+  eval (LispList (x:xs))  = do
+    fn <- eval x
+    apply fn where
+      apply (LispQuot f) = f xs
+      apply (LispFunc f) = mapM eval xs >>= f
+      apply expr         = throwError $ "[eval] " ++ show expr ++ " cannot call as function"
+  eval (LispList []) = throwError "[eval] Cannot eval empty list"
+#+end_src
+
+最后在 =shell= 函数对我们的状态单子进行求值时需要加一层判断，如果单子
+求值为 =Left error= 时打印异常，如果为 =Right= 时打印表达式的求值结果。
+
+#+begin_src haskell
+  shell :: Context -> InputT IO ()
+  shell ctx = do
+    mline <- getInputLine "lisp> "
+    case mline of
+      Nothing   -> shell ctx
+      Just line -> case runParser lispP "" "Lisp interpretor" line of
+	Left error -> outputStrLn $ show error
+	Right expr -> do
+	  result <- liftIO $ runExceptT (runStateT (eval expr) ctx)
+	  case result of
+	    Left error -> outputStrLn error >> shell ctx
+	    Right (expr', ctx') -> do
+	      outputStrLn (show (ctx', expr'))
+	      shell ctx'
+#+end_src
+
+通过这两种单子变换的使用可以发现，Haskell 中的单子是一个非常强大的类型
+类，对单子的抽象使得调用者对状态的处理不感知，极大地提高了代码的可读性。
+下面我们试一下我们的解释器是否可以正确的抛出和捕获异常。
+
+#+begin_src haskell
+    ghci> runInputT defaultSettings (shell symbols)
+    lisp> (set a 1)
+    (fromList [("*",<function>),("+",<function>),("-",<function>),("/",<function>),("a",1),("set",<special-form>)],1)
+    lisp> ()
+    [eval] Cannot eval empty list
+    lisp> (a 1)
+    [eval] 1 cannot call as function
+#+end_src

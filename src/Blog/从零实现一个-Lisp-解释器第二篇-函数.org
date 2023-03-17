@@ -1,0 +1,109 @@
+#+TITLE: 从零实现一个 Lisp 解释器第二篇－函数
+#+DATE: <2023-03-01 Wed 12:49>
+#+LAYOUT: post
+#+TAGS: Haskell, Lisp
+#+CATEGORIES: Haskell
+
+** 本系列链接
+- [[file:从零实现一个-Lisp-解释器第一篇-类型定义与解析.org]]
+- [[file:从零实现一个-Lisp-解释器第二篇-函数.org]]
+- [[file:从零实现一个-Lisp-解释器第三篇-状态与变量.org]]
+- [[file:从零实现一个-Lisp-解释器第四篇-lambda-函数与控制语句.org]]
+
+完整代码地址：[[https://github.com/cycoe/lisp-interpretor]]
+
+参考博客：[[https://www.defmacro.org/ramblings/lisp-in-haskell.html]]
+
+** Lisp 中的列表
+上一篇中我们已经对 Lisp 中定义 LispInt 和 LispSymbol 两种类型进行了介
+绍。但是对于一门编程语言来说，只能对确定的东西进行求值写不出有用的程序，
+我们需要一种结构来表示程序的逻辑，这种结构就是函数。
+
+在 Lisp 中，函数调用是以列表的形式进行表达的，并且使用前缀表达式的方式
+表示。你可以将函数调用理解成由函数符号和参数组成的列表，对列表求值就是
+将列表中的函数应用到列表中的参数上。如下面的两个列表都表示函数调用，第
+一个表达式表示将 =+= 操作符应用在 =(* 1 2)= 和 =3= 上，第二个表达式表
+示将 =fib= 函数应用在 10 上。注意在 Lisp 中操作符和函数符号是等价的。
+
+#+begin_src lisp
+  (+ (* 1 2) 3)
+  (fib 10)
+#+end_src
+
+** Lisp 中函数的表示
+通过以上表达式可以发现，Lisp 中的函数以符号的形式进行表示，这是因为这
+些函数我们在符号表中进行了绑定，它们也可以表示成 lambda 函数的形式。总
+的来说，Lisp 中的函数可以将若干个 Lisp 表达式作为参数，并且返回一个
+Lisp 表达式。明白了这点我们就很容易写出 LispFunc 的构造函数。
+
+#+begin_src haskell
+  data LispExpr = LispInt Integer
+		| LispSymbol String
+		| LispFunc ([LispExpr] -> LispExpr)
+		| LispList [LispExpr]
+#+end_src
+
+同样也需要补充 =show= 接口，列表类型我们仍以列表的形式进行输出，而由于
+函数类型不是可格式化的类型，我们先用 =<function>= 字符串进行代替。
+
+#+begin_src haskell
+  instance Show LispExpr where
+    show :: LispExpr -> String
+    show (LispFunc _) = "<function>"
+    show (LispList xs) = "(" ++ unwords (show <$> xs) ++")"
+#+end_src
+
+然后是解析函数，我们需要增加一个 =listP= 解析器用于列表形式的解析，并
+且将这个解析器加到 =LispP= 解析器中。
+
+#+begin_src haskell
+    listP :: GenParser Char st LispExpr
+    listP = LispList <$> do
+      char '(' *> sepBy lispP spaces <* char ')'
+
+    lispP :: GenParser Char st LispExpr
+    lispP = try intP <|> try symbolP <|>
+      listP
+#+end_src
+
+最后是最重要的求值函数。函数对象求值后不发生变化，列表类型求值时首先将
+列表中的每个表达式进行求值，然后再将列表的第一项作为函数应用到剩余的参
+数上。此处我们假定了列表的第一个表达式一定是个函数，其他情况直接返回未
+定义暂时不做处理。
+
+#+begin_src haskell
+  eval :: Context -> LispExpr -> LispExpr
+  eval ctx (LispFunc f)       = LispFunc f
+  eval ctx (LispList (x:xs))  = apply (eval ctx x) (eval ctx <$> xs) where
+    apply :: LispExpr -> [LispExpr] -> LispExpr
+    apply (LispFunc f) args = f args
+    apply _ args = undefined
+#+end_src
+
+下面我们在 symbols 中实现一些内置的操作符，让我们的解释器支持加减乘除
+等操作。此处我们实现的数学运算符支持不定长的参数输入，并对参数依次进行
+计算折叠。
+
+#+begin_src haskell
+  intBinaryOp :: (Integer -> Integer -> Integer) -> [LispExpr] -> LispExpr
+  intBinaryOp op (x:xs) =LispInt $ foldl op (unwrapInt x) (map unwrapInt xs) where
+    unwrapInt :: LispExpr -> Integer
+    unwrapInt (LispInt i) = i
+    unwrapInt _           = undefined
+
+  symbols :: Context
+  symbols = Map.fromList
+    [ ("+", LispFunc (intBinaryOp (+)))
+    , ("-", LispFunc (intBinaryOp (-)))
+    , ("*", LispFunc (intBinaryOp (*)))
+    , ("/", LispFunc (intBinaryOp div))
+    ]
+#+end_src
+
+到此为止，我们的解释器已经支持对函数进行调用，让我们算一下从 1 累加到
+10 的结果是否正确吧。
+
+#+begin_src haskell
+  eval symbols <$> runParser lispP "" "" "(+ 1 2 3 4 5 6 7 8 9 10)"
+  -- Right 55
+#+end_src

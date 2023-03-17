@@ -1,8 +1,18 @@
-#+TITLE: 从零实现一个 Lisp 解释器第一篇－－类型定义与解析
+#+TITLE: 从零实现一个 Lisp 解释器第一篇－类型定义与解析
 #+DATE: <2023-02-26 Sun 22:21>
 #+LAYOUT: post
 #+TAGS: Haskell, Lisp
 #+CATEGORIES: Haskell
+
+** 本系列链接
+- [[file:从零实现一个-Lisp-解释器第一篇-类型定义与解析.org]]
+- [[file:从零实现一个-Lisp-解释器第二篇-函数.org]]
+- [[file:从零实现一个-Lisp-解释器第三篇-状态与变量.org]]
+- [[file:从零实现一个-Lisp-解释器第四篇-lambda-函数与控制语句.org]]
+
+完整代码地址：[[https://github.com/cycoe/lisp-interpretor]]
+
+参考博客：[[https://www.defmacro.org/ramblings/lisp-in-haskell.html]]
 
 ** 前言
 又开一个新坑，这次是使用 Haskell 从零开始写一个 Lisp 解释器，将支持基
@@ -38,7 +48,8 @@ Lisp 表达式，这也成为后续操作的基础。
 3. 输出求值结果（show）
 
 用户输入是整个运行过程的源头，我们需要针对整型和符号定义对应的解析器。
-这里我们使用 Parsec 库定义组合子进行解析操作。
+这里我们使用 Parsec 库定义组合子进行解析操作，将字符串解析为 Lisp 表达
+式。
 
 #+begin_src haskell
   intP :: GenParser Char st LispExpr
@@ -53,5 +64,58 @@ Lisp 表达式，这也成为后续操作的基础。
     r <- many $ firstAllowed <|> digit
     return (f:r) where
       firstAllowed = oneOf "+-*/" <|> letter
+
+  lispP :: GenParser Char st LispExpr
+  lispP = try intP <|> try symbolP
 #+end_src
 
+
+与解析过程相对应的，我们需要一个函数将 Lisp 表达式重新格式化为字符串用
+于输出。在 Haskell 中可格式化为字符串的类型我们一般会声明为 Show 类型
+类的实例，实现它的 =show= 接口来完成格式化。
+
+#+begin_src haskell
+  instance Show LispExpr where
+    show :: LispExpr -> String
+    show (LispInt i)    = show i
+    show (LispSymbol s) = s
+#+end_src
+
+到目前为止，我们已经可以对整型和符号进行解析和输出，快来试一下吧。
+
+#+begin_src haskell
+  a = runParser lispP "" "" "a"
+  show <$> a
+  -- Just a
+  i = runParser lispP "" "" "123"
+  show <$> i
+  -- Just 123
+#+end_src
+
+最后是对 LispExpr 进行求值的函数，这个函数我们命名为 =eval= 。对
+LispInt 求值的结果就是它本身，而 LispSymbol 有点复杂。LispSymbol 表示
+的是从一个字符串到 Lisp 表达式的绑定，那么我们需要定义一个数据结构来表
+示这种绑定，Haskell 中可以使用 Map 来表示这种绑定关系。
+
+#+begin_src haskell
+  import qualified Data.Map as Map
+  type Context = Map.Map String LispExpr
+#+end_src
+
+那么最后就可以实现这个求值函数。
+
+#+begin_src haskell
+  eval :: Context -> LispExpr -> LispExpr
+  eval ctx (LispInt i)    = (LispInt i)
+  eval ctx (LispSymbol s) = ctx Map.! s
+#+end_src
+
+使用 eval 对 LispInt 和 LispSymbol 进行求值。整型 123 求值后就是它本身，
+而符号 =a= 求值是从我们传入的符号表中查找对应的 Lisp 表达式进行返回。
+
+#+begin_src haskell
+  eval Map.empty (LispInt 123)
+  -- 123
+  eval (Map.fromList [("a", LispInt 123)]) (LispSymbol "a")
+  -- 123
+#+end_src

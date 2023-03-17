@@ -1,0 +1,363 @@
+#+TITLE: 从零实现一个 Lisp 解释器第四篇－lambda 函数与控制语句
+#+DATE: <2023-03-10 Fri 12:39>
+#+LAYOUT: post
+#+TAGS: Haskell, Lisp
+#+CATEGORIES: Haskell
+
+** 本系列链接
+- [[file:从零实现一个-Lisp-解释器第一篇-类型定义与解析.org]]
+- [[file:从零实现一个-Lisp-解释器第二篇-函数.org]]
+- [[file:从零实现一个-Lisp-解释器第三篇-状态与变量.org]]
+- [[file:从零实现一个-Lisp-解释器第四篇-lambda-函数与控制语句.org]]
+
+完整代码地址：[[https://github.com/cycoe/lisp-interpretor]]
+
+参考博客：[[https://www.defmacro.org/ramblings/lisp-in-haskell.html]]
+
+** lamdba 函数
+在函数式编程语言中，lambda 函数是一个非常通用的概念，表示一类没有别名只有函数定义的函数对象。在 lisp 中 lambda 函数可以用如下的形式进行表示
+
+#+begin_src lisp
+  (lambda (x) (* x x))
+#+end_src
+
+其中 =lambda= 是一个内置的函数符号，表示当前的列表是一个 lambda 函数定义。紧跟 =lambda= 之后的 =(x)= 是该函数形参列表，表示该函数接收一个参数并将其绑定到 =x= 。最后一部分的 =(* x x)= 是函数体表达式，是当前函数的返回值。
+
+那么我们可以将这个 lambda 函数作为一个函数对象进行调用。
+
+#+begin_src lisp
+  ((lambda (x) (* x x)) 2)
+#+end_src
+
+或者我们可以像绑定其他对象一样将这个 lambda 函数绑定到一个符号 f 上，并使用这个符号进行调用。
+
+#+begin_src lisp
+  (set f (lambda (x) (* x x))))
+  (f 2)
+#+end_src
+
+** 函数签名
+为了实现上面的 lambda 函数定义的功能，我们可以定义一个内置函数关键字 lambda，它接受一个参数列表和一个函数体表达式，并返回构造出的 LispFunc 函数。但我们注意到，函数的定义和函数的调用过程是分开的，因此我们需要一种方式实现中间的参数传递过程。一种最简单的方式就是定义函数签名，在函数调用时通过函数签名去上下文中获取参数传入函数。
+
+第一步我们需要定义函数签名的类型并修改我们的 LispFunc 和 LispQuot 定义，将函数签名也作为它们的一部分。这里我们将函数签名定义为 String 的列表。同时需要注意我们的 LispFunc 类型中第一个成员类型由 =[LispExpr] -> LispState= 变为了 =LispState= ，这是因为函数参数改为从状态中获取无需再显式传入。
+
+#+begin_src haskell
+  data LispExpr = LispInt Integer
+		| LispSymbol String
+		| LispFunc LispState FunctionSignature
+		| LispQuot LispState FunctionSignature
+		| LispList [LispExpr]
+
+  type FunctionSignature = [String]
+#+end_src
+
+对应的 show 函数也需要做一些修改，现在我们可以打印出函数对应的签名了。
+
+#+begin_src haskell
+  instance Show LispExpr where
+    show :: LispExpr -> String
+    show (LispFunc _ sign) = "<function>" ++ show sign
+    show (LispQuot _ sign) = "<special-form>" ++ show sign
+#+end_src
+
+最大的变化在 =eval= 函数，我们将 LispList 的整个求值过程可以分为两步。第一步为 =applyArgsToContext expectedArgs args= ，在这一步我们将函数签名中期望的参数名称和实际函数应用的参数一一对应起来并写入状态；第二步我们调用函数 =f= ，在这一步函数将根据函数签名从状态中取出参数并进行函数求值。 =...= 是我们定义的一个特殊参数签名，代表匹配剩余的所有参数。
+
+#+begin_src haskell
+    eval :: LispExpr -> LispState
+    eval (LispFunc f sign)  = return $ LispFunc f sign
+    eval (LispQuot f sign)  = return $ LispQuot f sign
+    eval (LispList (x:xs))  = eval x >>= apply where
+      apply (LispQuot f expectedArgs) = apply' expectedArgs xs f
+      apply (LispFunc f expectedArgs) = do
+	args <- mapM eval xs
+	apply' expectedArgs args f
+      apply expr = throwError $ "[eval] " ++ show expr ++ " cannot call as function"
+      apply' :: FunctionSignature -> [LispExpr] -> LispState -> LispState
+      apply' expectedArgs args f = applyArgsToContext expectedArgs args >> f
+      applyArgsToContext :: FunctionSignature -> [LispExpr] -> StateT Context LispError ()
+      applyArgsToContext ("...":_) args = modify $ Map.insert "..." (LispList args)
+      applyArgsToContext [] _ = return ()
+      applyArgsToContext (earg:eargs) (arg:args) = do
+	modify $ Map.insert earg arg
+	applyArgsToContext eargs args
+    eval (LispList []) = throwError "[eval] Cannot eval empty list"
+#+end_src
+
+为了方便从状态中获取符号和函数签名绑定的参数表达式，我们再定义两个工具函数 =getSymbol= 和 =getSymbols=
+
+#+begin_src haskell
+    getSymbol :: String -> LispState
+    getSymbol symbol = do
+      ctx <- get
+      if symbol `Map.member` ctx
+      then return $ ctx Map.! symbol
+      else throwError $ "[getSymbol] symbol [" ++ symbol ++ "] NOT in context!"
+
+    getSymbols :: FunctionSignature -> StateT Context LispError [LispExpr]
+    getSymbols = mapM getSymbol
+#+end_src
+
+最后我们可以实现 =lispLambda= 函数用于 lambda 函数的定义，lambda 函数调用时从状态中获取 args 和 body 两个参数，分别代表形参列表和函数体表达式。返回由函数体和形参列表生成的函数签名组成的函数 LispFunc 就是我们通过 lambda 关键字定义的新函数。同样的，其他函数也需要做一下相应的修改来适配我们的新代码。
+
+#+begin_src haskell
+  lispSetArgs :: FunctionSignature
+  lispSetArgs = ["symbol", "expr"]
+  lispSet :: LispState
+  lispSet = do
+    [LispSymbol s, expr] <- getSymbols lispSetArgs
+    eval_e <- eval expr
+    modify $ Map.insert s eval_e
+    return eval_e
+
+  lispLambdaArgs :: FunctionSignature
+  lispLambdaArgs = ["args", "body"]
+  lispLambda :: LispState
+  lispLambda = do
+    [LispList args, body] <- getSymbols lispLambdaArgs
+    return $ LispFunc (eval body) ((\(LispSymbol arg) -> arg) <$> args)
+
+  intBinaryOp :: (Integer -> Integer -> Integer) -> LispState
+  intBinaryOp op = do
+    LispList (x:xs) <- getSymbol "..."
+    return . LispInt $ foldl op (unwrapInt x) (map unwrapInt xs) where
+    unwrapInt :: LispExpr -> Integer
+    unwrapInt (LispInt i) = i
+    unwrapInt expr        = undefined
+
+  symbols :: Context
+  symbols = Map.fromList
+    [ ("set", LispQuot lispSet lispSetArgs)
+    , ("lambda", LispQuot lispLambda lispLambdaArgs)
+    , ("+", LispFunc (intBinaryOp (+)) ["..."])
+    , ("-", LispFunc (intBinaryOp (-)) ["..."])
+    , ("*", LispFunc (intBinaryOp (*)) ["..."])
+    , ("/", LispFunc (intBinaryOp div) ["..."])
+    ]
+#+end_src
+
+完成！让我们来试一下定义一个 double 函数将传入的值翻倍。
+
+#+begin_src haskell
+  ghci> runInputT defaultSettings (shell symbols)
+  lisp> (set double (lambda (x) (* x 2)))
+  (fromList [("*",<function>["..."]),("+",<function>["..."]),("-",<function>["..."]),("/",<function>["..."]
+  l-form>["args","body"]),("set",<special-form>["symbol","expr"]),("symbol",double)],<function>["x"])
+  lisp> (double 10)
+  (fromList [("*",<function>["..."]),("+",<function>["..."]),("-",<function>["..."]),("...",(10 2)),("/",<f
+  lambda",<special-form>["args","body"]),("set",<special-form>["symbol","expr"]),("symbol",double),("x",10)
+#+end_src
+
+** 结构控制函数
+到目前为止我们已经能够使用我们的 Lisp 解释器进行简单的函数定义和求值，但是它还缺少一些非常重要的功能，那就是分支判断和循环等结构控制函数。这些函数的逻辑无法通过我们目前已有的关键字进行实现，因此我们需要将它们实现为内置的函数关键字。
+
+*** 分支判断
+函数式语言中的 if 关键字和 c 语言中的三目条件运算符很相似，是一个接收三个参数的函数，分别为条件表达式 cond、条件为真时的返回值 expr1 和条件为假时的返回值 expr2。expr1 和 expr2 可以为任意的 Lisp 表达式，而 cond 由于我们并未定义布尔类型，这里可以采用和 c 语言中一样的策略，整数零代表假而非零为真。需要注意的是，这里我们将 if 函数定义为 LispQuot 类型，保证参数在传入时不被求值，只有满足条件的分支才被手动求值。
+
+#+begin_src haskell
+  lispIfArgs :: FunctionSignature
+  lispIfArgs = ["cond", "expr1", "expr2"]
+  lispIf :: LispState
+  lispIf = do
+    [cond, expr1, expr2] <- getSymbols lispIfArgs
+    econd <- eval cond
+    case econd of
+      LispInt i -> eval $ if i /= 0 then expr1 else expr2
+      e         -> throwError $ "[lispIf] expr [" ++ show e
+				++ "] CANNOT be a condition!"
+#+end_src
+
+*** 比较函数
+虽然比较函数并不属于结构控制函数，但是我们会在分支和循环的条件判断中用到它。为了方便后面的演示和代码开发，我们先实现比较函数 lispCmp 和对布尔值取非的 not 函数，有了前面的经验，这两个函数的实现都非常简单。
+
+#+begin_src haskell
+  lispCmpArgs :: FunctionSignature
+  lispCmpArgs = ["left", "right"]
+  lispCmp :: (Integer -> Integer -> Bool) -> LispState
+  lispCmp op = do
+    [l, r] <- getSymbols lispCmpArgs
+    case (l, r) of
+      (LispInt li, LispInt ri) -> return . LispInt $ if li `op` ri then 1 else 0
+      (lo, ro) -> throwError $ "[lispCmp] expr1 [" ++ show lo
+			    ++ "] and expr2[" ++ show ro ++ "] MUST be LispInt!"
+
+  lispNotArgs :: FunctionSignature
+  lispNotArgs = ["cond"]
+  lispNot :: LispState
+  lispNot = do
+    [cond] <- getSymbols lispNotArgs
+    case cond of
+      LispInt i -> return . LispInt $ if i == 0 then 1 else 0
+      other -> throwError $ "[lispNot] cond [" ++ show other ++ "] MUST be LispInt!"
+#+end_src
+
+有了 lispCmp 函数，比较相等、不等、大于小于等操作都可以通过传入 Haskell 的比较函数实现。
+
+#+begin_src haskell
+  symbols = Map.fromList
+    [ ("eq", LispFunc (lispCmp (==)) lispCmpArgs)
+    , ("ne", LispFunc (lispCmp (/=)) lispCmpArgs)
+    , ("gt", LispFunc (lispCmp (>)) lispCmpArgs)
+    , ("ge", LispFunc (lispCmp (>=)) lispCmpArgs)
+    , ("lt", LispFunc (lispCmp (<)) lispCmpArgs)
+    , ("le", LispFunc (lispCmp (<=)) lispCmpArgs)
+    , ("not", LispFunc lispNot lispNotArgs)]
+#+end_src
+
+通过结构控制函数，我们可以实现第一个真正意义上包含逻辑功能的函数，比如我们可以实现绝对值函数 =abs=
+
+#+begin_src lisp
+  lisp> (set abs (lambda (x) (if (lt x 0) (- 0 x) x)))
+  <function>["x"]
+  lisp> (abs 1)
+  1
+  lisp> (abs -1)
+  1
+#+end_src
+
+** 递归与调用栈
+要如何实现循环？这个问题在函数式语言中一般是通过递归来解决。我们的解释器支持递归嗎？让我们先来试着定义一个求阶乘的递归函数。
+
+这个函数非常简单，当传入的 =x= 为 0 时为递归终止条件我们直接返回 1；当 =x= 不为 0 时函数返回 =x= 和 (x-1) 阶乘的乘积。让我们传入 5 求一下阶乘的结果。
+
+#+begin_src lisp
+  lisp> (set prod (lambda (x) (if (eq x 0) 1 (* x (prod (- x 1))))))
+  <function>["x"]
+  lisp> (prod 5)
+  120
+#+end_src
+
+竟然得到了正确的结果，这是怎么做到的呢？让我们来分析一下整个调用过程。递归函数的调用可以分为参数向下传递，以及到达终于条件后结果向上回归两个过程。
+
+#+begin_src lisp
+  (prod 5)
+  (* 5 (prod 4))
+  (* 5 (* 4 (prod 3)))
+  (* 5 (* 4 (* 3 (prod 2))))
+  (* 5 (* 4 (* 3 (* 2 (prod 1)))))
+  (* 5 (* 4 (* 3 (* 2 (* 1 (prod 0))))))
+  (* 5 (* 4 (* 3 (* 2 (* 1 1)))))
+  (* 5 (* 4 (* 3 (* 2 1))))
+  (* 5 (* 4 (* 3 2)))
+  (* 5 (* 4 6))
+  (* 5 24)
+  120
+#+end_src
+
+可以看到，整个调用和求值过程没有问题，但是真的是这样嗎？我们可以试着把 =x= 和 =(prod (- x 1))= 的顺序换一下。
+
+#+begin_src lisp
+  lisp> (set prod (lambda (x) (if (eq x 0) 1 (* (prod (- x 1)) x))))
+  <function>["x"]
+  lisp> (prod 5)
+  0
+#+end_src
+
+结果竟然变成了零！说明我们的解释器在处理递归时还有 bug。问题出在哪里？我们可以先分析一下递归参数向下传递的部分。
+
+#+begin_src lisp
+  (prod 5)
+  (* (prod 4) x)
+  (* (* (prod 3) x) x)
+  (* (* (* (prod 2) x) x) x)
+  (* (* (* (* (prod 1) x) x) x) x)
+  (* (* (* (* (* (prod 0) x) x) x) x) x)
+#+end_src
+
+这里与上面的 prod 定义方式一个很明显的不同之处就是，由于函数中 =x= 的位置在 =(prod (- x 1))= 之后，导致 =x= 的求值在整个递归过程到达终止条件并且开始回归之后才会进行。当调用到 =(prod 0)= 时事情开始变得不同，0 作为参数 =x= 的值被传入函数，这个时候我们的状态表中就保存了符号 =x= 对应的值为 0。当 =(prod 0)= 调用完成后会返回结果为 1，但此时状态表中的 =x= 绑定的始终是 0，导致后续对 =x= 进行求值的结果全部为 0。
+
+#+begin_src lisp
+  (* (* (* (* (* (prod 0) x) x) x) x) x)
+  (* (* (* (* (* 1 0) x) x) x) x)
+  (* (* (* (* 0 0) x) x) x)
+  (* (* (* 0 0) x) x)
+  (* (* 0 0) x)
+  (* 0 0)
+  0
+#+end_src
+
+问题出现的根本原因在于我们的递归函数中有些表达式在递归函数自身之后求值，导致之前调用的函数的参数对后面用到同名参数的表达式产生了干扰。解决这个问题的一个办法是为每一次函数调用都绑定一个栈空间，并且这个栈空间在函数调用完成之后就被销毁，这样函数的局部变量就拥有了生命周期，不同函数之间也不会产生影响。
+
+首先我们来定义一下我们的栈空间类型，先将原先的符号映射表类型改名为 =SymbolTable= ，再将 =Context= 定义为一个链表的形式。 =Context= 由一个 SymbolTable 和一个可能指向下一个 Context 节点的 =Maybe= 对象组成。如果 Maybe 为 =Nothing= 表示当前栈帧为栈底。
+
+#+begin_src haskell
+  type SymbolTable = Map.Map String LispExpr
+  data Context     = Context SymbolTable (Maybe Context) deriving Show
+#+end_src
+
+为了对栈空间进行操作，我们需要定义 4 个工具函数。 =pushContext= 将一个空的符号表压入栈； =popContext= 将栈顶的符号表弹出，如果当前帧已经是栈底则不做处理； =updateSymbol= 将一个符号和对应的表达式更新到栈顶的符号表中； =updateSymbolInParent= 函数比较特殊，它将符号和对应的表达式更新到栈顶的上一层栈帧。
+
+#+begin_src haskell
+  pushContext :: Context -> Context
+  pushContext ctx = Context Map.empty (Just ctx)
+
+  popContext :: Context -> Context
+  popContext (Context _ (Just parent)) = parent
+
+  updateSymbol :: String -> LispExpr -> StateT Context LispError ()
+  updateSymbol symbol expr = modify $ \(Context st mp) -> Context (Map.insert symbol expr st) mp
+
+  updateSymbolInParent :: String -> LispExpr -> StateT Context LispError ()
+  updateSymbolInParent symbol expr = modify $ \(Context st mp) -> Context st (update mp) where
+    update (Just (Context st mp)) = Just (Context (Map.insert symbol expr st) mp)
+#+end_src
+
+=getSymbol= 函数现在查找符号需要依次从栈顶查找到栈底，对应了当前作用域不存在变量则去外层作用域查找的操作。
+
+#+begin_src haskell
+  getSymbol :: String -> LispState
+  getSymbol symbol = do
+    ctx <- get
+    getSymbolFrom symbol ctx where
+      getSymbolFrom :: String -> Context -> LispState
+      getSymbolFrom symbol (Context st mp) =
+	if symbol `Map.member` st
+	then return $ st Map.! symbol
+	else case mp of
+	  Nothing -> throwError $ "[getSymbol] symbol [" ++ symbol ++ "] NOT in symbol table!"
+	  Just parent -> getSymbolFrom symbol parent
+#+end_src
+
+LispList 求值函数也需要做一些调整，最核心的部分是 =apply'= 函数的实现。现在在函数调用之前我们先用 =modify pushContext= 压入空的符号表，然后在空的符号表上更新函数参数的值，调用函数，最后将当前栈顶弹出完成一个完整的函数调用过程。
+
+#+begin_src haskell
+  eval (LispSymbol s)     = getSymbol s
+  eval (LispList (x:xs))  = eval x >>= apply where
+    apply (LispQuot f expectedArgs) = apply' expectedArgs xs f
+    apply (LispFunc f expectedArgs) = do
+      args <- mapM eval xs
+      apply' expectedArgs args f
+    apply expr = throwError $ "[eval] " ++ show expr ++ " cannot call as function"
+    apply' :: FunctionSignature -> [LispExpr] -> LispState -> LispState
+    apply' expectedArgs args f = do
+      modify pushContext
+      applyArgsToContext expectedArgs args
+      result <- f
+      modify popContext
+      return result
+    applyArgsToContext :: FunctionSignature -> [LispExpr] -> StateT Context LispError ()
+    applyArgsToContext ("...":_) args = updateSymbol "..." $ LispList args
+    applyArgsToContext [] _ = return ()
+    applyArgsToContext (earg:eargs) (arg:args) = do
+      updateSymbol earg arg
+      applyArgsToContext eargs args
+#+end_src
+
+当 =lispSet= 函数被调用时同样会压入空栈帧，但我们不应该在当前栈顶绑定符号，因为当前栈顶会在 =lispSet= 函数调用完成后被弹出。所以需要调用 =updateSymbolInParent= 在上一层栈帧绑定符号和表达式。
+
+#+begin_src haskell
+  lispSet :: LispState
+  lispSet = do
+    [LispSymbol s, expr] <- getSymbols lispSetArgs
+    eval_e <- eval expr
+    updateSymbolInParent s eval_e
+    return eval_e
+#+end_src
+
+最后验证一下我们的阶乘函数是否可以正确工作。
+
+#+begin_src lisp
+  lisp> (set prod (lambda (x) (if (eq x 0) 1 (* (prod (- x 1)) x))))
+  <function>["x"]
+  lisp> (prod 5)
+  120
+#+end_src
