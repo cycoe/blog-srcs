@@ -1,0 +1,162 @@
+#+TITLE: Haskell -- 初识 Lens
+#+DATE: <2024-01-27 Sat 22:56>
+#+LAYOUT: post
+#+TAGS: Haskell
+#+CATEGORIES: Haskell
+
+#+HTML: <!-- more -->
+
+** 什么是 Lens
+在 Haskell 等不可变语言中，如果我们希望修改数据中的某个值，就需要创建数据的一个新的实例。如我们定义一个名为 =Name= 的数据结构表示人名：
+
+#+begin_src haskell :results none
+  :set +m
+  data Name = Name { _first :: String
+                   , _last :: String
+                   } deriving Show
+#+end_src
+
+然后定义我们的名字，我们可以通过记录语法提供的 =_first= 和 =_last= 函数分别从 Name 对象中获取两个成员，这种形式的函数被称为 getter 函数
+
+#+begin_src haskell :exports both
+  name = Name "Cycoe" "Joo"
+  print name
+#+end_src
+
+#+RESULTS:
+: Name {_first = "Cycoe", _last = "Joo"}
+
+如果我们想要方便地对 first name 进行修改，我们可以定义一个 =setFirst= 工具函数。接收一个 Name 和新的 first name，返回新的 Name 对象，这种形式的函数被称为 setter 函数
+
+我们可以使用这个函数修改我们的 first name 并生成一个新的名字
+
+#+begin_src haskell :exports both
+  :{
+  setFirst :: Name -> String -> Name
+  setFirst (Name _ l) f' = Name f' l
+  :}
+
+  setFirst name "Handsome"
+#+end_src
+
+#+RESULTS:
+: Name {_first = "Handsome", _last = "Joo"}
+
+那么有没有什么办法可以通过一个统一的数据类型表示 setter 和 getter 函数呢？当然有，那就是已经被发现的 Lens 类型。Lens 含义是透镜，它的功能就是提供对数据结构内部成员进行查看（view）、写入（set）和变换（over）的能力。
+
+** 定义 Lens 类型
+
+Lens 类型可以被定义为如下的类型
+
+#+begin_src haskell :results none
+  :set -XRankNTypes
+  type Lens s a = forall f. Functor f => (a -> f a) -> s -> f s
+#+end_src
+
+Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 =Functor a= 的函数和一个聚合类型 =s= ，并返回 =Functor s= 。此处为什么会引入 Functor？到下面我们会逐渐明白
+
+有了 =Lens= 类型，我们还需要一个工具函数 =lens= 帮助我们将 =setter= 和 =getter= 函数构造成 =Lens=
+
+#+begin_src haskell :results none :eval no
+  lens :: (s -> a) -> (s -> a -> s) -> Lens s a
+#+end_src
+
+=lens= 的类型非常清晰，接收一个 =getter= 函数和一个 =setter= 函数并返回构造好的 =Lens= 对象。但是我们要怎么实现它呢？
+
+既然我们已经知道 =Lens= 类型是一个函数，那我们可以试着将它展开，得到 =lens= 函数的真实类型
+
+#+begin_src haskell :results none :eval no
+  lens :: (s -> a) -> (s -> a -> s) -> (a -> f a) -> s -> f s
+  lens getter setter f s = ???
+#+end_src
+
+我们使用了一些变量表示函数的参数，那么等号的右边又该是什么样的呢？
+
+在实现 Haskell 函数时，一种常用的思路是根据组合的方式拼出需要的类型，再来验证是否正确，此处我们也可以这样做。我们使用 =getter= 从 =s= 对象中获取出成员 =a= ，再使用函数 =f= 将 =a= 转换为 =Functor a= ，最后再将 =setter s= 作用到函子 =Functor a= 上得到函子 =Functor s=
+
+#+begin_src haskell :results none
+  :{
+  lens :: (s -> a) -> (s -> a -> s) -> Lens s a
+  lens getter setter f s = setter s <$> f (getter s)
+  :}
+#+end_src
+
+这样我们就可以构造我们的第一个 =Lens= 了
+
+#+begin_src haskell :exports both
+  :{
+  firstL :: Lens Name String
+  firstL = lens _first setFirst
+  :}
+  :t firstL
+#+end_src
+
+#+RESULTS:
+: firstL :: Functor f => (String -> f String) -> Name -> f Name
+
+** =view=
+
+有了 Lens 之后我们要怎么利用它查看结构体中的成员呢？我们需要定义一个 =view= 函数，接收一个透镜对象和一个结构体，返回要查看的成员
+
+#+begin_src haskell :results none :eval no
+  view :: Lens s a -> s -> a
+  view l s = ???
+#+end_src
+
+现在我们有了透镜 =l= 和结构体 =s= ，我们需要利用这两个对象构造出类型 =a= 。我们的透镜是由 =lens= 函数生成的，因此 =l= 等价于如下表示，对应到上面 =lens= 函数的实现
+
+#+begin_src haskell :results none :eval no
+  l :: Functor f => (a -> f a) -> s -> f s
+  l f s = setter s <$> f (getter s)
+#+end_src
+
+也就是说我们可以通过把函数 =f= 和结构体 =s= 传给 =l= 生成一个 =f s= 类型的返回值。那么在函数 =view= 的参数中我们已经有了 =l= 和 =s= ，还缺少一个函数 =f= 将类型 =a= 转换为函子。此处函子类型的选择是关键，这也是 =Lens= 类型中引入函子类型的原因，我们通过选择不同类型的函子实现不同的功能。
+
+此处我们通过 =getter s= 拿到了成员 =a= ，又用函数 =f= 将 =a= 转换为了函子 =Functor a= ，又将 =setter s= 作用到了函子上得到了新的 =s= 。对于 =view= 函数来说，我们只希望前半部分生效，也就是说我们希望 =setter s <$> f a= 仍返回 =f a= ，并且内部的值不变。
+
+那什么样的函子能满足这个条件呢？这里我们可以定义一个 =Const= 函子类型，它的性质为任何函数作用在它上面都不会影响内部的值
+
+#+begin_src haskell :results none
+  newtype Const a b = Const { getConst :: a }
+#+end_src
+
+=Const a= 是函子类型类的实例
+
+#+begin_src haskell :results none
+  :{
+  instance Functor (Const a) where
+    fmap _ (Const a) = Const a
+  :}
+#+end_src
+
+#+begin_src haskell :exports both
+  c = Const 1
+  getConst $ (+10) <$> c
+#+end_src
+
+#+RESULTS:
+: 1
+
+那么我们就可以实现 =view= 函数了
+
+#+begin_src haskell :results none
+  view :: Lens s a -> s -> a
+  view l s = getConst $ l Const s
+#+end_src
+
+为了使用方便可以将 =view= 实现为运算符 =^.=
+
+#+begin_src haskell :results none
+  infixr ^. 4
+  (^.) :: Lens s a -> s -> a
+  (^.) s l = getConst $ l Const s
+#+end_src
+
+快来试一下吧
+
+#+begin_src haskell :exports both
+  name ^. firstL
+#+end_src
+
+#+RESULTS:
+: Cycoe
