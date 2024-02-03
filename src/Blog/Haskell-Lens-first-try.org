@@ -9,12 +9,14 @@
 ** 什么是 Lens
 在 Haskell 等不可变语言中，如果我们希望修改数据中的某个值，就需要创建数据的一个新的实例。如我们定义一个名为 =Name= 的数据结构表示人名：
 
-#+begin_src haskell :results none
+#+begin_src haskell
   :set +m
   data Name = Name { _first :: String
                    , _last :: String
                    } deriving Show
 #+end_src
+
+#+RESULTS:
 
 然后定义我们的名字，我们可以通过记录语法提供的 =_first= 和 =_last= 函数分别从 Name 对象中获取两个成员，这种形式的函数被称为 getter 函数
 
@@ -48,10 +50,12 @@
 
 Lens 类型可以被定义为如下的类型
 
-#+begin_src haskell :results none
+#+begin_src haskell
   :set -XRankNTypes
   type Lens s a = forall f. Functor f => (a -> f a) -> s -> f s
 #+end_src
+
+#+RESULTS:
 
 Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 =Functor a= 的函数和一个聚合类型 =s= ，并返回 =Functor s= 。此处为什么会引入 Functor？到下面我们会逐渐明白
 
@@ -74,12 +78,14 @@ Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 
 
 在实现 Haskell 函数时，一种常用的思路是根据组合的方式拼出需要的类型，再来验证是否正确，此处我们也可以这样做。我们使用 =getter= 从 =s= 对象中获取出成员 =a= ，再使用函数 =f= 将 =a= 转换为 =Functor a= ，最后再将 =setter s= 作用到函子 =Functor a= 上得到函子 =Functor s=
 
-#+begin_src haskell :results none
+#+begin_src haskell
   :{
   lens :: (s -> a) -> (s -> a -> s) -> Lens s a
   lens getter setter f s = setter s <$> f (getter s)
   :}
 #+end_src
+
+#+RESULTS:
 
 这样我们就可以构造我们的第一个 =Lens= 了
 
@@ -94,7 +100,7 @@ Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 
 #+RESULTS:
 : firstL :: Functor f => (String -> f String) -> Name -> f Name
 
-** =view=
+** =view= 函数
 
 有了 Lens 之后我们要怎么利用它查看结构体中的成员呢？我们需要定义一个 =view= 函数，接收一个透镜对象和一个结构体，返回要查看的成员
 
@@ -116,22 +122,28 @@ Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 
 
 那什么样的函子能满足这个条件呢？这里我们可以定义一个 =Const= 函子类型，它的性质为任何函数作用在它上面都不会影响内部的值
 
-#+begin_src haskell :results none
-  newtype Const a b = Const { getConst :: a }
+#+begin_src haskell
+  newtype Const a b = Const { runConst :: a }
 #+end_src
+
+#+RESULTS:
 
 =Const a= 是函子类型类的实例
 
-#+begin_src haskell :results none
+#+begin_src haskell
   :{
   instance Functor (Const a) where
     fmap _ (Const a) = Const a
   :}
 #+end_src
 
+#+RESULTS:
+
+我们可以尝试定义一个 =Const= 函子的实例，并且内部保存数字 1。我们在上面作用函数 =(+10)= ，通过 =runConst= 函数获取内部值可以发现保存的值仍为 1
+
 #+begin_src haskell :exports both
   c = Const 1
-  getConst $ (+10) <$> c
+  runConst $ (+10) <$> c
 #+end_src
 
 #+RESULTS:
@@ -139,18 +151,26 @@ Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 
 
 那么我们就可以实现 =view= 函数了
 
-#+begin_src haskell :results none
+#+begin_src haskell
+  :{
   view :: Lens s a -> s -> a
-  view l s = getConst $ l Const s
+  view l s = runConst $ l Const s
+  :}
 #+end_src
+
+#+RESULTS:
 
 为了使用方便可以将 =view= 实现为运算符 =^.=
 
-#+begin_src haskell :results none
-  infixr ^. 4
-  (^.) :: Lens s a -> s -> a
-  (^.) s l = getConst $ l Const s
+#+begin_src haskell
+  :{
+  infixr 4 ^.
+  (^.) :: s -> Lens s a -> a
+  (^.) s l = runConst $ l Const s
+  :}
 #+end_src
+
+#+RESULTS:
 
 快来试一下吧
 
@@ -160,3 +180,127 @@ Lens 被定义为一个高阶函数，接收一个将成员类型 =a= 转换为 
 
 #+RESULTS:
 : Cycoe
+
+** =set= 函数
+
+=set= 函数用于设置聚合数据中的成员，接收透镜 =l= 、一个原始的聚合数据 =s= 和要设置的成员值 =a= ，返回新的聚合数据对象
+
+#+begin_src haskell :results none :eval no
+  set :: Lens s a -> a -> s -> s
+  set l a s = ???
+#+end_src
+
+参考我们实现 =view= 的思路，在此处我们也需要选取一个合适的函子来完成 =set= 函数。但是与 =view= 函数中使用的 =Const= 函子不同，此处我们需要一个能把 =setter s= 函数作用到内部类型上的函子。标准库中其实已经内置了这个函子，就是 =Identity=
+
+#+begin_src haskell
+  :{
+  newtype Identity a = Identity { runIdentity :: a }
+  instance Functor Identity where
+    fmap f (Identity a) = Identity $ f a
+  :}
+#+end_src
+
+#+RESULTS:
+
+那么我们仿照 =view= 函数的方式补全 =set= 函数的实现
+
+#+begin_src haskell :results none :eval no
+  set :: Lens s a -> a -> s -> s
+  set l a s = runIdentity $ l Identity s
+#+end_src
+
+这个实现对嗎？仔细观察一下就会发现问题，因为我们根本没有使用到变量 =a= 。再来分析一下 =Lens= 类型，此处我们希望的流程是通过 =getter s= 拿到原本的成员 =a= ，通过某一个函数将 =a= 转换为 =Functor a= ，最后再将 =setter s= 作用上去，并且我们希望忽略掉原本通过 =getter= 取出的成员 =a=
+
+这里我们需要引入一个函数 =const= ，这个函数与 =Const= 函子不同
+
+#+begin_src haskell
+  :{
+  const :: a -> b -> a
+  const a _ = a
+  :}
+#+end_src
+
+#+RESULTS:
+
+也就是说 =const= 函数可以绑定一个 =a= 类型的变量返回一个函数，这个函数不管输入什么都会返回原本绑定的变量 =a=
+
+#+begin_src haskell :results output :exports both
+  constF = const 1
+  constF 2
+  constF "Cycoe"
+#+end_src
+
+#+RESULTS:
+: 1
+: 1
+
+那么我们可以利用这个函数和 =Identity= 组合出一个新的函数 =Identity . const a= ，这个函数不管接收什么参数都会返回我们绑定的变量 =a= ，那么我们的 =set= 函数可以实现为
+
+#+begin_src haskell
+  :{
+  set :: Lens s a -> a -> s -> s
+  set l a s = runIdentity $ l (Identity . const a) s
+  :}
+#+end_src
+
+#+RESULTS:
+
+同样的定义一个对应的运算符 =.~=
+
+#+begin_src haskell
+  :{
+  infixr 4 .~
+  (.~) :: Lens s a -> a -> s -> s
+  (.~) = set
+  :}
+#+end_src
+
+#+RESULTS:
+
+使用 =set= 函数设置成员
+
+#+begin_src haskell :exports both
+  firstL .~ "Handsome" $ name
+#+end_src
+
+#+RESULTS:
+: Name {_first = "Handsome", _last = "Joo"}
+
+** =over= 函数
+
+=over= 函数的功能是通过一个变换函数 =a -> a= 修改聚合类型中的成员，有了 =set= 函数的经验我们可以非常简单地写出 =over= 函数的实现
+
+#+begin_src haskell
+  :{
+  over :: Lens s a -> (a -> a) -> s -> s
+  over l f s = runIdentity $ l (Identity . f) s
+  :}
+#+end_src
+
+#+RESULTS:
+
+同样地，定义 =over= 函数对应的运算符
+
+#+begin_src haskell
+  :{
+  infixr 4 %~
+  (%~) :: Lens s a -> (a -> a) -> s -> s
+  (%~) = over
+  :}
+#+end_src
+
+#+RESULTS:
+
+使用 =over= 函数将 first name 变为全部字母大写
+
+#+begin_src haskell :exports both
+  import Data.Char (toUpper)
+  firstL %~ (map toUpper) $ name
+#+end_src
+
+#+RESULTS:
+: Name {_first = "CYCOE", _last = "Joo"}
+
+** 总结
+
+有了 =Lens= 类型和 =view= 、 =set= 和 =over= 函数，我们可以方便地对聚合类型中的成员执行查看、修改与变换操作。下一篇 Blog 中我们将探讨如何处理泛型类型，即将形如 =Data a= 的类型变换为 =Data b= ，以及如何处理嵌套的聚合类型
